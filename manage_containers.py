@@ -27,7 +27,7 @@ class Container:
         self.gcc = gcc_version
         self.clang = clang_version
         self.ubuntu = ubuntu_version
-        self.tag = None
+        self.tag: Optional[str] = None
         self.is_alive = self.live_check()
 
     def add(self) -> None:
