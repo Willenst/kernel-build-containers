@@ -10,7 +10,6 @@ import os
 import subprocess
 import sys
 import argparse
-from typing import List, Optional
 
 class Container:
     """
@@ -21,16 +20,16 @@ class Container:
         clang (str): Version of Clang compiler (optional).
         ubuntu (str): Version of Ubuntu.
         tag (str): Docker image tag.
-        is_alive (bool): Whether the container is built.
+        exists (bool): Whether the container is built.
     """
-    def __init__(self, gcc_version: str, clang_version: Optional[str], ubuntu_version: str) -> None:
+    def __init__(self, gcc_version, clang_version, ubuntu_version):
         self.gcc = gcc_version
         self.clang = clang_version
         self.ubuntu = ubuntu_version
-        self.tag: Optional[str] = None
-        self.is_alive = self.live_check()
+        self.tag = None
+        self.exists = self.check()
 
-    def add(self) -> None:
+    def add(self):
         """Builds the Docker container with the specified compiler"""
         build_args=['--build-arg', f'GCC_VERSION={self.gcc}',
                     '--build-arg', f'UBUNTU_VERSION={self.ubuntu}',
@@ -39,28 +38,23 @@ class Container:
                     '--build-arg', f'GID={os.getgid()}'
         ]
         if self.clang:
-            subprocess.run([SUDO_CMD, 'docker', 'build', '--build-arg',
-                            f'CLANG_VERSION={self.clang}', *build_args,
-                            '-t', f'kernel-build-container:clang-{self.clang}_gcc-{self.gcc}', '.'],
-                           text=True, check=True)
-            self.live_check()
-        else:
-            subprocess.run([SUDO_CMD, 'docker', 'build', *build_args,
-                            '-t', f'kernel-build-container:gcc-{self.gcc}', '.'],
-                           text=True, check=True)
-            self.live_check()
+            build_args=['--build-arg', f'CLANG_VERSION={self.clang}']+build_args
+        subprocess.run([SUDO_CMD, 'docker', 'build', *build_args,
+                        '-t', f'kernel-build-container:gcc-{self.gcc}_clang-{self.clang}', '.'],
+                    text=True, check=True)
+        self.check()
 
-    def rm(self) -> None:
+    def rm(self):
         """Removes the Docker container if it exists"""
         if self.tag:
             subprocess.run([SUDO_CMD, 'docker', 'rmi',
                             f'kernel-build-container:{self.tag}'],
                             text=True, check=True)
-            self.live_check()
+            self.check()
         else:
             print('No such container')
 
-    def live_check(self) -> bool:
+    def check(self):
         """Checks if the Docker container with the specified tag exists"""
         if self.gcc:
             compiler = f'gcc-{self.gcc}'
@@ -77,7 +71,7 @@ class Container:
         self.tag = None
         return False
 
-def extract_containers() -> List[str]:
+def extract_containers():
     """Extracts the list of existing container tags from Docker"""
     containers = subprocess.run([SUDO_CMD, 'docker', 'images', '--format', '{{.Tag}}'],
                                 stdout=subprocess.PIPE,
@@ -85,7 +79,7 @@ def extract_containers() -> List[str]:
     compilers=containers.stdout.strip().split()
     return compilers
 
-def check_group() -> str:
+def check_group():
     """Checks if the user is in the Docker group, returns 'sudo' if not"""
     result = subprocess.run(['groups'], capture_output=True,
                             text=True, check=True)
@@ -94,18 +88,18 @@ def check_group() -> str:
     print("Hey, we gonna use sudo for running docker")
     return 'sudo'
 
-def add_handler(needed_compiler: str, containers: List[Container]) -> None:
+def add_handler(needed_compiler, containers):
     """Adds the specified container(s) based on the provided compiler"""
     if needed_compiler == 'all':
         for c in containers:
-            if not c.is_alive:
+            if not c.exists:
                 print(f'Adding container for {needed_compiler} '
                       f'on {c.ubuntu} with gcc {c.gcc} and clang {c.clang}')
                 c.add()
         return
     for c in containers:
         if 'gcc-' + c.gcc == needed_compiler:
-            if c.is_alive:
+            if c.exists:
                 sys.exit(f'[!] ERROR: container with the compiler'
                          f'{needed_compiler} already exists!')
             print(f'Adding container for {needed_compiler} '
@@ -113,53 +107,28 @@ def add_handler(needed_compiler: str, containers: List[Container]) -> None:
             c.add()
             return
         if c.clang and 'clang-' + c.clang == needed_compiler:
-            if c.is_alive:
+            if c.exists:
                 sys.exit(f'[!] ERROR: container with the compiler'
                          f'{needed_compiler} already exists!')
             print(f'Adding container for {needed_compiler} '
                   f'on {c.ubuntu} with gcc {c.gcc} and clang {c.clang}')
             c.add()
             return
-    sys.exit('[!] ERROR: no container with the compiler "{needed_compiler}"')
+    sys.exit(f'[!] ERROR: no container with the compiler "{needed_compiler}"')
 
-def remove_handler(removed_compiler: str, containers: List[Container]) -> None:
+def remove_handler(removed_compiler, containers) -> None:
     """Removes the specified container(s) based on the provided compiler"""
     if removed_compiler == 'all':
         for c in containers:
-            if c.is_alive:
+            if c.exists:
                 print(f'Removing container for {removed_compiler} '
                       f'on {c.ubuntu} with gcc {c.gcc} and clang {c.clang}')
                 c.rm()
         return
-    for c in containers:
-        if 'gcc-' + c.gcc == removed_compiler:
-            print(f'Removing container for {removed_compiler} '
-                  f'on {c.ubuntu} with gcc {c.gcc} and clang {c.clang}')
-            c.rm()
-            return
-        if c.clang and 'clang-' + c.clang == removed_compiler:
-            print(f'Removing container for {removed_compiler} '
-                  f'on {c.ubuntu} with gcc {c.gcc} and clang {c.clang}')
-            c.rm()
-            return
     sys.exit('[!] ERROR: no container with the compiler "{needed_compiler}"')
 
-def main() -> None:
+def main():
     """Main function to manage the containers"""
-    containers = []
-    containers += [Container("4.9", None, "16.04")]
-    containers += [Container("5", None, "16.04")]
-    containers += [Container("6", None, "18.04")]
-    containers += [Container("7", None, "18.04")]
-    containers += [Container("8", None, "20.04")]
-    containers += [Container("9", None, "20.04")]
-    containers += [Container("10", None, "20.04")]
-    containers += [Container("11", "12", "22.04")]
-    containers += [Container("12", "13", "22.04")]
-    containers += [Container("12", "14", "22.04")]
-    containers += [Container("13", "15", "23.04")]
-    containers += [Container("14", "16", "24.04")]
-    containers += [Container("14", "17", "24.04")]
 
     compilers = ['gcc-4.9',
                  'gcc-5',
@@ -172,6 +141,11 @@ def main() -> None:
                  'gcc-12',
                  'gcc-13',
                  'gcc-14',
+                 'clang-7',
+                 'clang-8',
+                 'clang-9',
+                 'clang-10',
+                 'clang-11',
                  'clang-12',
                  'clang-13',
                  'clang-14',
@@ -183,15 +157,40 @@ def main() -> None:
     parser = argparse.ArgumentParser(description='Manage the kernel-build-containers')
     parser.add_argument('-l','--list', action='store_true',
                         help='show the kernel build containers')
-    parser.add_argument('-a','--add', choices=compilers, nargs='+',
-                        help='build a container with this compiler (\'all\' to build all of them)')
-    parser.add_argument('-r','--remove', choices=compilers, nargs='+',
-                    help='remove a container with this compiler (\'all\' to remove all of them)')
+    parser.add_argument('-a', '--add', choices=compilers, metavar='compiler',
+                        help=f'build a container with this compiler: ({", ".join(compilers)}, or "all" to build with all of them)')
+    parser.add_argument('-r', '--remove', choices=['all'], metavar='all',
+                        help='remove all created containers')
     args = parser.parse_args()
+
+    if not any([args.list, args.add, args.remove]):
+        parser.print_help()
+        sys.exit(1)
+    if args.add and args.remove:
+        print("Really? Adding and deleting at the same time doesnt make sense!")
+        sys.exit(1)
+    global SUDO_CMD
+    SUDO_CMD = check_group()
+
+
+    containers = []
+    containers += [Container("4.9", None, "16.04")]
+    containers += [Container("5", None, "16.04")]
+    containers += [Container("6", "7", "18.04")]
+    containers += [Container("7", "8", "18.04")]
+    containers += [Container("8", "9", "20.04")]
+    containers += [Container("9", "10", "20.04")]
+    containers += [Container("10", "11", "20.04")]
+    containers += [Container("11", "12", "22.04")]
+    containers += [Container("12", "13", "22.04")]
+    containers += [Container("12", "14", "22.04")]
+    containers += [Container("13", "15", "23.04")]
+    containers += [Container("14", "16", "24.04")]
+    containers += [Container("14", "17", "24.04")]
 
     if args.list:
         for c in containers:
-            if c.is_alive:
+            if c.exists:
                 status = '[+]'
             else:
                 status = '[-]'
@@ -199,15 +198,12 @@ def main() -> None:
         sys.exit(0)
 
     if args.add:
-        for compiler in args.add:
-            add_handler(compiler,containers)
+        add_handler(args.add,containers)
+        sys.exit(0)
     elif args.remove:
-        for compiler in args.remove:
-            remove_handler(compiler,containers)
-    else:
-        parser.print_help()
+        remove_handler(args.remove,containers)
         sys.exit(0)
 
-SUDO_CMD = check_group()
+
 if __name__ == '__main__':
     main()
