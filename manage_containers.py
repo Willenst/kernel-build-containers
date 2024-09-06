@@ -35,7 +35,7 @@ compilers = ['gcc-4.9',
                 'clang-17',
                 'all']
 
-SUDO_CMD = 'sudo'
+SUDO_CMD = ''
 
 class Container:
     """
@@ -92,8 +92,9 @@ def check_group():
     result = subprocess.run(['groups'], capture_output=True,
                             text=True, check=True)
     if 'docker' in result.stdout or 'root' in result.stdout:
-        return
+        return ''
     print('We need to use sudo for running docker')
+    return 'sudo'
 
 def add_handler(needed_compiler, containers):
     """Adds the specified container(s) based on the provided compiler"""
@@ -118,18 +119,13 @@ def add_handler(needed_compiler, containers):
             print(f'Adding {c.ubuntu} container with gcc {c.gcc} and clang {c.clang}')
             c.add()
             return
-    sys.exit(f'[!] ERROR: no container with the compiler "{needed_compiler}"')
 
 def remove_handler(removed_compiler, containers) -> None:
     """Removes the specified container(s) based on the provided compiler"""
     if removed_compiler == 'all':
-        running = set()
-        for compiler in compilers:
-            running.update(subprocess.run([SUDO_CMD, 'docker', 'ps',
-                                           '-f', f'ancestor=kernel-build-container:{compiler}', 
-                                           '--format', '{{.ID}}'],
-                                           text=True, check=True,
-                                           stdout=subprocess.PIPE).stdout.split())
+        running = subprocess.run(f"{SUDO_CMD} docker ps | grep 'kernel-build-container' | awk '{{print $1}}'", 
+                                shell=True, text=True, check=True, stdout=subprocess.PIPE).stdout.split()
+
         if running:
             sys.exit('You still have running containers:\n' + '\n'.join(running))
         for c in containers:
@@ -144,8 +140,8 @@ def main():
     parser.add_argument('-l','--list', action='store_true',
                         help='show the kernel build containers')
     parser.add_argument('-a', '--add', choices=compilers, metavar='compiler',
-                        help=f'build a container with this compiler: ({", ".join(compilers)},'
-                              ' or "all" to build with all of them)')
+                        help=f'build a container with this compiler: ({", ".join(compilers)}, where'
+                              ' "all" for all of the compilers)')
     parser.add_argument('-r', '--remove', choices=['all'], metavar='all',
                         help='remove all created containers')
     args = parser.parse_args()
@@ -157,12 +153,11 @@ def main():
         print("Adding and removing at the same time doesn't make sense!")
         sys.exit(1)
 
-    check_group()
-
+    globals()["SUDO_CMD"] = check_group()
 
     containers = []
-    containers += [Container("4.9", None, "16.04")]
-    containers += [Container("5", None, "16.04")]
+    containers += [Container("4.9", "5.0", "16.04")]
+    containers += [Container("5", "6.0", "16.04")]
     containers += [Container("6", "7", "18.04")]
     containers += [Container("7", "8", "18.04")]
     containers += [Container("8", "9", "20.04")]
