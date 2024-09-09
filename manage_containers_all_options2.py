@@ -33,6 +33,8 @@ compilers = ['gcc-4.9',
                 'clang-15',
                 'clang-16',
                 'clang-17',
+                'all-gcc',
+                'all-clang',
                 'all']
 
 SUDO_CMD = ''
@@ -103,6 +105,22 @@ def add_handler(needed_compiler, containers):
             if not c.id:
                 print(f'Adding {c.ubuntu} container with gcc {c.gcc} and clang {c.clang}')
                 c.add()
+        return
+    if needed_compiler == 'all_gcc':
+        for c in containers:
+            if not c.id:
+                print(f'Adding {c.ubuntu} container with gcc {c.gcc}')
+                c.add()
+                subprocess.run([SUDO_CMD,'docker','rmi',f'kernel-build-container:clang-{c.clang}'])
+            subprocess.run([SUDO_CMD,'docker','tag',f'kernel-build-container:gcc-{c.gcc}',f'kernel-build-container:clang-{c.clang}'])
+        return
+    if needed_compiler == 'all_clang':
+        for c in containers:
+            if not c.id:
+                print(f'Adding {c.ubuntu} container with clang {c.clang}')
+                c.add()
+                subprocess.run([SUDO_CMD,'docker','rmi',f'kernel-build-container:gcc-{c.gcc}'])
+            subprocess.run([SUDO_CMD,'docker','tag',f'kernel-build-container:clang-{c.clang}',f'kernel-build-container:gcc-{c.gcc}'])
         return
     for c in containers:
         if 'gcc-' + c.gcc == needed_compiler:

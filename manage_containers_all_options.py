@@ -33,6 +33,8 @@ compilers = ['gcc-4.9',
                 'clang-15',
                 'clang-16',
                 'clang-17',
+                'all-gcc',
+                'all-clang',
                 'all']
 
 SUDO_CMD = ''
@@ -53,38 +55,57 @@ class Container:
         self.clang = clang_version
         self.ubuntu = ubuntu_version
         self.id = self.check()
+        self.tag_gcc = None
+        self.tag_clang = None
 
-    def add(self):
+    def add(self, mode):
+        if self.id:
+            if self.tag_gcc:
+                subprocess.run(['docker', 'tag', self.id, f'kernel-build-container:clang-{self.clang}'])
+                return
+            if self.clang:
+                subprocess.run(['docker', 'tag', self.id, f'kernel-build-container:clang-{self.gcc}'])
+                return
+
         """Builds the Docker container with the specified compiler"""
-        build_args=['--build-arg', f'GCC_VERSION={self.gcc}',
-                    '--build-arg', f'UBUNTU_VERSION={self.ubuntu}',
+        build_args=['--build-arg', f'UBUNTU_VERSION={self.ubuntu}',
                     '--build-arg', f'UNAME={os.getlogin()}',
                     '--build-arg', f'UID={os.getuid()}',
-                    '--build-arg', f'GID={os.getgid()}',
-                    '-t', f'kernel-build-container:gcc-{self.gcc}'
+                    '--build-arg', f'GID={os.getgid()}'
         ]
         if self.clang:
-            build_args=['--build-arg', f'CLANG_VERSION={self.clang}']+build_args+ \
-                       ['-t', f'kernel-build-container:clang-{self.clang}']
+            build_args=['--build-arg', f'CLANG_VERSION={self.clang}']+build_args
+            if mode=='clang' or mode=='all':
+                build_args=build_args+['-t', f'kernel-build-container:clang-{self.clang}']
+        if self.gcc:
+            build_args=['--build-arg', f'GCC_VERSION={self.gcc}',]+build_args
+            if mode=='gcc' or mode=='all':
+                build_args=build_args+['-t', f'kernel-build-container:clang-{self.gcc}']  
         subprocess.run([SUDO_CMD, 'docker', 'build', *build_args, '.'],
                         text=True, check=True)
         self.check()
 
     def rm(self):
-        """Removes the Docker container if it exists"""      
+        """Removes the Docker container"""      
         subprocess.run([SUDO_CMD, 'docker', 'rmi', '-f', self.id],
                         text=True, check=True)
         self.check()
 
     def check(self):
         """Checks if the Docker container exists and chains id to the class"""
-        search = [f'kernel-build-container:gcc-{self.gcc}']
-        if self.clang:
-            search = [f'kernel-build-container:clang-{self.clang}']
-        cmd = subprocess.run([SUDO_CMD, 'docker', 'images', *search, '--format', '{{.ID}}'],
+        search_gcc = [f'kernel-build-container:gcc-{self.gcc}']
+        search_clang = [f'kernel-build-container:clang-{self.clang}']
+        cmd1 = subprocess.run([SUDO_CMD, 'docker', 'images', *search_gcc, '--format', '{{.ID}},{{.TAG}}'],
                                 stdout=subprocess.PIPE,
                                 text=True, check=True)
-        container_id=cmd.stdout
+        cmd2 = subprocess.run([SUDO_CMD, 'docker', 'images', *search_clang, '--format', '{{.ID}},{{.TAG}}'],
+                        stdout=subprocess.PIPE,
+                        text=True, check=True)
+        if cmd1:
+            id_,self.tag_gcc = cmd1.stdout.split(",")
+        if cmd2:
+            id_,self.tag_clang = cmd1.stdout.split(",")
+        container_id=id_
         return container_id.strip()
 
 def check_group():
@@ -102,7 +123,19 @@ def add_handler(needed_compiler, containers):
         for c in containers:
             if not c.id:
                 print(f'Adding {c.ubuntu} container with gcc {c.gcc} and clang {c.clang}')
-                c.add()
+                c.add('all')
+        return
+    if needed_compiler == 'all_gcc':
+        for c in containers:
+            if not c.id:
+                print(f'Adding {c.ubuntu} container with gcc {c.gcc}')
+                c.add('gcc')
+        return
+    if needed_compiler == 'all_clang':
+        for c in containers:
+            if not c.id:
+                print(f'Adding {c.ubuntu} container with clang {c.clang}')
+                c.add('clang')
         return
     for c in containers:
         if 'gcc-' + c.gcc == needed_compiler:
