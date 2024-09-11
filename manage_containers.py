@@ -86,9 +86,8 @@ class Container:
         cmd = subprocess.run([self.sudo, 'docker', 'images', *search, '--format', '{{.ID}}'],
                                 stdout=subprocess.PIPE,
                                 text=True, check=True)
-        container_id = cmd.stdout.strip()
-        self.id = container_id
-        return container_id
+        self.id = cmd.stdout.strip()
+        return self.id
 
 def check_group():
     """Checks if the user is in the Docker group, returns 'sudo' if not"""
@@ -108,6 +107,7 @@ def add_handler(needed_compiler, containers):
                 c.add()
         return
     for c in containers:
+        print(c.id)
         if 'gcc-' + c.gcc == needed_compiler:
             if c.id:
                 sys.exit(f'[!] ERROR: container with the compiler {needed_compiler} already exists!')
@@ -137,10 +137,10 @@ def list_containers(containers):
         for c in containers:
             c.check()
             if c.id:
-                status = 'added: [+]'
+                status = '[+]'
             else:
-                status = 'removed: [-]'
-            print(f'container with gcc {c.gcc} and clang {c.clang} on ubuntu {c.ubuntu} {status}')
+                status = '[-]'
+            print(f'container with gcc {c.gcc} and clang {c.clang} on ubuntu {c.ubuntu}: {status}')
         sys.exit(0)
 
 
