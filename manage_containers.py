@@ -49,11 +49,11 @@ class Container:
         exists (bool): Whether the container is built.
     """
     def __init__(self, gcc_version, clang_version, ubuntu_version):
+        self.sudo = check_group()
         self.gcc = gcc_version
         self.clang = clang_version
         self.ubuntu = ubuntu_version
         self.id = self.check()
-        self.sudo = check_group()
 
     def add(self):
         """Builds the Docker container with the specified compiler"""
