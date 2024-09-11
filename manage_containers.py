@@ -86,9 +86,9 @@ class Container:
         cmd = subprocess.run([self.sudo, 'docker', 'images', *search, '--format', '{{.ID}}'],
                                 stdout=subprocess.PIPE,
                                 text=True, check=True)
-        container_id=cmd.stdout
+        container_id=cmd.stdout.strip()
         self.id = container_id
-        return container_id.strip()
+        return container_id
 
 def check_group():
     """Checks if the user is in the Docker group, returns 'sudo' if not"""
@@ -137,10 +137,10 @@ def list_containers(containers):
         for c in containers:
             c.check()
             if c.id:
-                status = '[+]'
+                status = 'added: [+]'
             else:
-                status = '[-]'
-            print(f'container with gcc {c.gcc} and clang {c.clang} on ubuntu {c.ubuntu}: {status}')
+                status = 'removed: [-]'
+            print(f'container with gcc {c.gcc} and clang {c.clang} on ubuntu {c.ubuntu} {status}')
         sys.exit(0)
 
 
