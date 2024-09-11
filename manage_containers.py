@@ -129,6 +129,16 @@ def remove_handler(removed_compiler, containers) -> None:
             print(f'Removing container for {removed_compiler} on {c.ubuntu} with gcc {c.gcc} and clang {c.clang}')
             c.rm()
 
+def list_containers(containers):
+        for c in containers:
+            if c.id:
+                status = '[+]'
+            else:
+                status = '[-]'
+            print(f'container with gcc {c.gcc} and clang {c.clang} on ubuntu {c.ubuntu}: {status}')
+        sys.exit(0)
+
+
 def main():
     """Main function to manage the containers"""
     parser = argparse.ArgumentParser(description='Manage the kernel-build-containers')
@@ -146,6 +156,7 @@ def main():
     if args.add and args.remove:
         print("Adding and removing at the same time doesn't make sense!")
         sys.exit(1)
+        
 
     Container.sudo = check_group()
 
@@ -165,19 +176,17 @@ def main():
     containers += [Container("14", "17", "24.04")]
 
     if args.list:
-        for c in containers:
-            if c.id:
-                status = '[+]'
-            else:
-                status = '[-]'
-            print(f'container with gcc {c.gcc} and clang {c.clang} on ubuntu {c.ubuntu}: {status}')
-        sys.exit(0)
+        if args.add or args.remove:
+            sys.exit("Combining these options doesn't make sense")             
+        list_containers(containers)
 
     if args.add:
         add_handler(args.add,containers)
+        list_containers(containers)
         sys.exit(0)
     elif args.remove:
         remove_handler(args.remove,containers)
+        list_containers(containers)
         sys.exit(0)
 
 if __name__ == '__main__':
