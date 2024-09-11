@@ -120,16 +120,15 @@ def add_handler(needed_compiler, containers):
 
 def remove_handler(removed_compiler, containers) -> None:
     """Removes the specified container(s) based on the provided compiler"""
-    if removed_compiler == 'all':
-        running = subprocess.run(f"{SUDO_CMD} docker ps | grep 'kernel-build-container' | awk '{{print $1}}'", 
-                                shell=True, text=True, check=True, stdout=subprocess.PIPE).stdout.split()
+    running = subprocess.run(f"{SUDO_CMD} docker ps | grep 'kernel-build-container' | awk '{{print $1}}'", 
+                            shell=True, text=True, check=True, stdout=subprocess.PIPE).stdout.split()
 
-        if running:
-            sys.exit('You still have running containers:\n' + '\n'.join(running))
-        for c in containers:
-            if c.id:
-                print(f'Removing container for {removed_compiler} on {c.ubuntu} with gcc {c.gcc} and clang {c.clang}')
-                c.rm()
+    if running:
+        sys.exit('You still have running containers:\n' + '\n'.join(running))
+    for c in containers:
+        if c.id:
+            print(f'Removing container for {removed_compiler} on {c.ubuntu} with gcc {c.gcc} and clang {c.clang}')
+            c.rm()
 
 def main():
     """Main function to manage the containers"""
