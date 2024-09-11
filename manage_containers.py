@@ -53,6 +53,7 @@ class Container:
         self.clang = clang_version
         self.ubuntu = ubuntu_version
         self.id = self.check()
+        self.sudo = check_group()
 
     def add(self):
         """Builds the Docker container with the specified compiler"""
@@ -66,13 +67,13 @@ class Container:
         if self.clang:
             build_args=['--build-arg', f'CLANG_VERSION={self.clang}']+build_args+ \
                        ['-t', f'kernel-build-container:clang-{self.clang}']
-        subprocess.run([SUDO_CMD, 'docker', 'build', *build_args, '.'],
+        subprocess.run([self.sudo, 'docker', 'build', *build_args, '.'],
                         text=True, check=True)
         self.check()
 
     def rm(self):
         """Removes the Docker container if it exists"""      
-        subprocess.run([SUDO_CMD, 'docker', 'rmi', '-f', self.id],
+        subprocess.run([self.sudo, 'docker', 'rmi', '-f', self.id],
                         text=True, check=True)
         self.check()
 
@@ -81,7 +82,7 @@ class Container:
         search = [f'kernel-build-container:gcc-{self.gcc}']
         if self.clang:
             search = [f'kernel-build-container:clang-{self.clang}']
-        cmd = subprocess.run([SUDO_CMD, 'docker', 'images', *search, '--format', '{{.ID}}'],
+        cmd = subprocess.run([self.sudo, 'docker', 'images', *search, '--format', '{{.ID}}'],
                                 stdout=subprocess.PIPE,
                                 text=True, check=True)
         container_id=cmd.stdout
