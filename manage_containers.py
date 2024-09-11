@@ -47,6 +47,7 @@ class Container:
         exists (bool): Whether the container is built.
     """
     sudo = ''
+    quiet_option = False
     def __init__(self, gcc_version, clang_version, ubuntu_version):
         self.gcc = gcc_version
         self.clang = clang_version
@@ -65,6 +66,8 @@ class Container:
         if self.clang:
             build_args=['--build-arg', f'CLANG_VERSION={self.clang}']+build_args+ \
                        ['-t', f'kernel-build-container:clang-{self.clang}']
+        if self.quiet_option:
+            build_args = build_args + ['-q']
         subprocess.run([self.sudo, 'docker', 'build', *build_args, '.'],
                         text=True, check=True)
         self.check()
@@ -131,6 +134,7 @@ def remove_handler(removed_compiler, containers) -> None:
 
 def list_containers(containers):
         for c in containers:
+            c.check()
             if c.id:
                 status = '[+]'
             else:
@@ -148,9 +152,11 @@ def main():
                         help=f'build a container with this compiler: ({", ".join(compilers)}, where "all" for all of the compilers)')
     parser.add_argument('-r', '--remove', choices=['all'], metavar='all',
                         help='remove all created containers')
+    parser.add_argument('-q','--quiet', action='store_true',
+                    help='Suppress the build output and print image ID on success')
     args = parser.parse_args()
 
-    if not any([args.list, args.add, args.remove]):
+    if not any([args.list, args.add, args.remove, args.quiet]):
         parser.print_help()
         sys.exit(1)
     if args.add and args.remove:
@@ -159,6 +165,8 @@ def main():
         
 
     Container.sudo = check_group()
+    if args.quiet:
+        Container.quiet_option = True
 
     containers = []
     containers += [Container("4.9", "5.0", "16.04")]
@@ -176,7 +184,7 @@ def main():
     containers += [Container("14", "17", "24.04")]
 
     if args.list:
-        if args.add or args.remove:
+        if args.add or args.remove or args.quiet:
             sys.exit("Combining these options doesn't make sense")             
         list_containers(containers)
 
