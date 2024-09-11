@@ -107,15 +107,13 @@ def add_handler(needed_compiler, containers):
     for c in containers:
         if 'gcc-' + c.gcc == needed_compiler:
             if c.id:
-                sys.exit(f'[!] ERROR: container with the compiler'
-                         f'{needed_compiler} already exists!')
+                sys.exit(f'[!] ERROR: container with the compiler {needed_compiler} already exists!')
             print(f'Adding {c.ubuntu} container with gcc {c.gcc} and clang {c.clang}')
             c.add()
             return
         if c.clang and 'clang-' + c.clang == needed_compiler:
             if c.id:
-                sys.exit(f'[!] ERROR: container with the compiler'
-                         f'{needed_compiler} already exists!')
+                sys.exit(f'[!] ERROR: container with the compiler {needed_compiler} already exists!')
             print(f'Adding {c.ubuntu} container with gcc {c.gcc} and clang {c.clang}')
             c.add()
             return
@@ -130,8 +128,7 @@ def remove_handler(removed_compiler, containers) -> None:
             sys.exit('You still have running containers:\n' + '\n'.join(running))
         for c in containers:
             if c.id:
-                print(f'Removing container for {removed_compiler} '
-                      f'on {c.ubuntu} with gcc {c.gcc} and clang {c.clang}')
+                print(f'Removing container for {removed_compiler} on {c.ubuntu} with gcc {c.gcc} and clang {c.clang}')
                 c.rm()
 
 def main():
@@ -140,8 +137,7 @@ def main():
     parser.add_argument('-l','--list', action='store_true',
                         help='show the kernel build containers')
     parser.add_argument('-a', '--add', choices=compilers, metavar='compiler',
-                        help=f'build a container with this compiler: ({", ".join(compilers)}, where'
-                              ' "all" for all of the compilers)')
+                        help=f'build a container with this compiler: ({", ".join(compilers)}, where "all" for all of the compilers)')
     parser.add_argument('-r', '--remove', choices=['all'], metavar='all',
                         help='remove all created containers')
     args = parser.parse_args()
