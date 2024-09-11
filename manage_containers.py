@@ -148,7 +148,7 @@ def main():
         sys.exit(1)
 
     Container.sudo = check_group()
-    
+
     containers = []
     containers += [Container("4.9", "5.0", "16.04")]
     containers += [Container("5", "6.0", "16.04")]
