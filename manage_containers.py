@@ -35,8 +35,6 @@ compilers = ['gcc-4.9',
                 'clang-17',
                 'all']
 
-SUDO_CMD = ''
-
 class Container:
     """
     Represents a Docker container configured for kernel building.
@@ -48,8 +46,8 @@ class Container:
         id (str): Docker image id.
         exists (bool): Whether the container is built.
     """
+    sudo = ''
     def __init__(self, gcc_version, clang_version, ubuntu_version):
-        self.sudo = check_group()
         self.gcc = gcc_version
         self.clang = clang_version
         self.ubuntu = ubuntu_version
@@ -121,7 +119,7 @@ def add_handler(needed_compiler, containers):
 
 def remove_handler(removed_compiler, containers) -> None:
     """Removes the specified container(s) based on the provided compiler"""
-    running = subprocess.run(f"{SUDO_CMD} docker ps | grep 'kernel-build-container' | awk '{{print $1}}'", 
+    running = subprocess.run(f"{Container.sudo} docker ps | grep 'kernel-build-container' | awk '{{print $1}}'", 
                             shell=True, text=True, check=True, stdout=subprocess.PIPE).stdout.split()
 
     if running:
@@ -149,8 +147,8 @@ def main():
         print("Adding and removing at the same time doesn't make sense!")
         sys.exit(1)
 
-    globals()["SUDO_CMD"] = check_group()
-
+    Container.sudo = check_group()
+    
     containers = []
     containers += [Container("4.9", "5.0", "16.04")]
     containers += [Container("5", "6.0", "16.04")]
