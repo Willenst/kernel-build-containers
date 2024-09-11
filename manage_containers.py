@@ -87,6 +87,7 @@ class Container:
                                 stdout=subprocess.PIPE,
                                 text=True, check=True)
         container_id=cmd.stdout
+        self.id = container_id
         return container_id.strip()
 
 def check_group():
