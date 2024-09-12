@@ -110,39 +110,41 @@ def add_handler(needed_compiler, containers):
         print(c.id)
         if 'gcc-' + c.gcc == needed_compiler:
             if c.id:
-                sys.exit(f'[!] ERROR: container with the compiler {needed_compiler} already exists!')
+                sys.exit(f'[!] ERROR: container with {needed_compiler} already exists!')
             print(f'Adding {c.ubuntu} container with gcc {c.gcc} and clang {c.clang}')
             c.add()
             return
         if c.clang and 'clang-' + c.clang == needed_compiler:
             if c.id:
-                sys.exit(f'[!] ERROR: container with the compiler {needed_compiler} already exists!')
+                sys.exit(f'[!] ERROR: container with {needed_compiler} already exists!')
             print(f'Adding {c.ubuntu} container with gcc {c.gcc} and clang {c.clang}')
             c.add()
             return
 
 def remove_handler(removed_compiler, containers) -> None:
     """Removes the specified container(s) based on the provided compiler"""
-    running = subprocess.run(f"{Container.sudo} docker ps | grep 'kernel-build-container' | awk '{{print $1}}'", 
-                            shell=True, text=True, check=True, stdout=subprocess.PIPE).stdout.split()
+    running = subprocess.run(f"{Container.sudo} docker ps"
+                              " | grep 'kernel-build-container' | awk '{{print $1}}'",shell=True, 
+                             text=True, check=True, stdout=subprocess.PIPE).stdout.split()
 
     if running:
         sys.exit('You still have running containers:\n' + '\n'.join(running))
     for c in containers:
         if c.id:
-            print(f'Removing container for {removed_compiler} on {c.ubuntu} with gcc {c.gcc} and clang {c.clang}')
+            print(f'Removing container for {removed_compiler} on '
+                  f'{c.ubuntu} with gcc {c.gcc} and clang {c.clang}')
             c.rm()
 
 def list_containers(containers):
-        for c in containers:
-            c.check()
-            if c.id:
-                status = '[+]'
-            else:
-                status = '[-]'
-            print(f'container with gcc {c.gcc} and clang {c.clang} on ubuntu {c.ubuntu}: {status}')
-        sys.exit(0)
-
+    """Print built containers"""
+    for c in containers:
+        c.check()
+        if c.id:
+            status = '[+]'
+        else:
+            status = '[-]'
+        print(f'container with gcc {c.gcc} and clang {c.clang} on ubuntu {c.ubuntu}: {status}')
+    sys.exit(0)
 
 def main():
     """Main function to manage the containers"""
@@ -150,7 +152,8 @@ def main():
     parser.add_argument('-l','--list', action = 'store_true',
                         help = 'show the kernel build containers')
     parser.add_argument('-a', '--add', choices = compilers, metavar = 'compiler',
-                        help=f'build a container with this compiler: ({", ".join(compilers)}, where "all" for all of the compilers)')
+                        help=f'build a container with this compiler: ({", ".join(compilers)},'
+                              'where "all" for all of the compilers)')
     parser.add_argument('-r', '--remove', choices = ['all'], metavar = 'all',
                         help = 'remove all created containers')
     parser.add_argument('-q','--quiet', action = 'store_true',
@@ -163,7 +166,6 @@ def main():
     if args.add and args.remove:
         print("Adding and removing at the same time doesn't make sense!")
         sys.exit(1)
-        
 
     Container.sudo = check_group()
     if args.quiet:
@@ -186,13 +188,14 @@ def main():
 
     if args.list:
         if args.add or args.remove or args.quiet:
-            sys.exit("Combining these options doesn't make sense")             
+            sys.exit("Combining these options doesn't make sense")
         list_containers(containers)
 
     if args.add:
         add_handler(args.add,containers)
         list_containers(containers)
-    elif args.remove:
+
+    if args.remove:
         remove_handler(args.remove,containers)
         list_containers(containers)
 
