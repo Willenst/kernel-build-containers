@@ -99,3 +99,4 @@ coverage run -a --branch manage_containers.py -r all
 echo "All tests completed. Creating report"
 coverage report --omit='/usr/lib/python3/dist-packages/*'
 coverage html --omit='/usr/lib/python3/dist-packages/*'
+rm .coverage
