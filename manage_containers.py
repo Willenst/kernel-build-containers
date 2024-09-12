@@ -93,7 +93,7 @@ def check_group():
     """Checks if the user is in the Docker group, returns 'sudo' if not"""
     result = subprocess.run(['groups'], capture_output = True,
                             text = True, check = True)
-    if 'docker' in result.stdout or 'root' in result.stdout:
+    if 'docker' in result.stdout:
         return ''
     print('We need to use sudo for running docker')
     return 'sudo'
@@ -192,11 +192,9 @@ def main():
     if args.add:
         add_handler(args.add,containers)
         list_containers(containers)
-        sys.exit(0)
     elif args.remove:
         remove_handler(args.remove,containers)
         list_containers(containers)
-        sys.exit(0)
 
 if __name__ == '__main__':
     main()
