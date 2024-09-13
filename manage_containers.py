@@ -98,7 +98,7 @@ def check_group():
     """Checks if the user is in the Docker group, returns 'sudo' if not"""
     result = subprocess.run(['groups'], capture_output = True,
                             text = True, check = True)
-    if 'docker' in result.stdout or 'root' in result.stdout:
+    if 'docker' in result.stdout:
         return ''
     print('We need to use sudo for running docker')
     return 'sudo'
@@ -115,14 +115,14 @@ def add_handler(needed_compiler, containers):
         print(c.id)
         if 'gcc-' + c.gcc == needed_compiler:
             if c.id:
-                sys.exit(f'[!] ERROR: container with the compiler {needed_compiler} already exists!')
-            print(f'Adding ubuntu {c.ubuntu} container with gcc {c.gcc} and clang {c.clang}')
+                sys.exit(f'[!] ERROR: container with {needed_compiler} already exists!')
+            print(f'Adding {c.ubuntu} container with gcc {c.gcc} and clang {c.clang}')
             c.add()
             return
         if c.clang and 'clang-' + c.clang == needed_compiler:
             if c.id:
-                sys.exit(f'[!] ERROR: container with the compiler {needed_compiler} already exists!')
-            print(f'Adding ubuntu {c.ubuntu} container with gcc {c.gcc} and clang {c.clang}')
+                sys.exit(f'[!] ERROR: container with {needed_compiler} already exists!')
+            print(f'Adding {c.ubuntu} container with gcc {c.gcc} and clang {c.clang}')
             c.add()
             return
 
@@ -137,15 +137,15 @@ def remove_handler(removed_compiler, containers) -> None:
         print('\nyou still have running containers, that can\'t be removed:\n', out)
 
 def list_containers(containers):
-        for c in containers:
-            c.check()
-            if c.id:
-                status = '[+]'
-            else:
-                status = '[-]'
-            print(f'container with gcc {c.gcc} and clang {c.clang} on ubuntu {c.ubuntu}: {status}')
-        sys.exit(0)
-
+    """Print built containers"""
+    for c in containers:
+        c.check()
+        if c.id:
+            status = '[+]'
+        else:
+            status = '[-]'
+        print(f'container with gcc {c.gcc} and clang {c.clang} on ubuntu {c.ubuntu}: {status}')
+    sys.exit(0)
 
 def main():
     """Main function to manage the containers"""
@@ -153,7 +153,8 @@ def main():
     parser.add_argument('-l','--list', action = 'store_true',
                         help = 'show the kernel build containers')
     parser.add_argument('-a', '--add', choices = compilers, metavar = 'compiler',
-                        help=f'build a container with this compiler: ({", ".join(compilers)}, where "all" for all of the compilers)')
+                        help=f'build a container with this compiler: ({", ".join(compilers)},'
+                              'where "all" for all of the compilers)')
     parser.add_argument('-r', '--remove', choices = ['all'], metavar = 'all',
                         help = 'remove all created containers')
     parser.add_argument('-q','--quiet', action = 'store_true',
@@ -163,10 +164,8 @@ def main():
     if not any([args.list, args.add, args.remove, args.quiet]):
         parser.print_help()
         sys.exit(1)
-    if args.add and args.remove:
-        print("Adding and removing at the same time doesn't make sense!")
-        sys.exit(1)
-        
+    if bool(args.list) + bool(args.add) + bool(args.remove) > 1:
+        sys.exit("Combining these options doesn't make sense")
 
     Container.sudo = check_group()
     if args.quiet:
@@ -188,18 +187,15 @@ def main():
     containers += [Container("14", "17", "24.04")]
 
     if args.list:
-        if args.add or args.remove or args.quiet:
-            sys.exit("Combining these options doesn't make sense")             
         list_containers(containers)
 
     if args.add:
         add_handler(args.add,containers)
         list_containers(containers)
-        sys.exit(0)
-    elif args.remove:
+
+    if args.remove:
         remove_handler(args.remove,containers)
         list_containers(containers)
-        sys.exit(0)
 
 if __name__ == '__main__':
     main()
