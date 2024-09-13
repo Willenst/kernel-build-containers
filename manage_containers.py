@@ -163,9 +163,8 @@ def main():
     if not any([args.list, args.add, args.remove, args.quiet]):
         parser.print_help()
         sys.exit(1)
-    if args.add and args.remove:
-        print("Adding and removing at the same time doesn't make sense!")
-        sys.exit(1)
+    if bool(args.list) + bool(args.add) + bool(args.remove) > 1:
+        sys.exit("Combining these options doesn't make sense")
 
     Container.sudo = check_group()
     if args.quiet:
@@ -187,8 +186,6 @@ def main():
     containers += [Container("14", "17", "24.04")]
 
     if args.list:
-        if args.add or args.remove or args.quiet:
-            sys.exit("Combining these options doesn't make sense")
         list_containers(containers)
 
     if args.add:
