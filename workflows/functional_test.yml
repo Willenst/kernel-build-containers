@@ -1,4 +1,4 @@
-ame: functional test
+name: functional test
 
 on:
   push:
