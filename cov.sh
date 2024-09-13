@@ -3,6 +3,9 @@
 set -x
 set -e
 
+echo "Cleaning coverage cache"
+coverage erase
+
 echo "Testing help command..."
 coverage run -a --branch manage_containers.py -h
 
@@ -78,7 +81,7 @@ coverage run -a --branch manage_containers.py -r gcc-10 && exit 1
 coverage run -a --branch manage_containers.py -a all -r all && exit 1
 
 echo "Testing adding existing container..."
-coverage run -a --branch manage_containers.py -a gcc-10
+coverage run -a --branch manage_containers.py -a gcc-10docker
 coverage run -a --branch manage_containers.py -a gcc-10 && exit 1
 coverage run -a --branch manage_containers.py -a gcc-12
 coverage run -a --branch manage_containers.py -a clang-13 && exit 1
