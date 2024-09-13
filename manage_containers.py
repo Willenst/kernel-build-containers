@@ -85,7 +85,6 @@ class Container:
                                  f"grep -E 'kernel-build-container:"
                                  f"(gcc-{self.gcc}|clang-{self.clang})' || true",
                                  shell=True, text=True, check=True, stdout=subprocess.PIPE).stdout
-        print("AAAAAA", len(running))
         if not running:
             subprocess.run([self.sudo, 'docker', 'rmi', '-f', self.id],
                             text=True, check=True)
