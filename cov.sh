@@ -58,6 +58,13 @@ coverage run -a --branch manage_containers.py -l
 coverage run -a --branch manage_containers.py -r all
 coverage run -a --branch manage_containers.py -l
 
+echo "Testing removal with running containers..."
+coverage run -a --branch manage_containers.py -a gcc-12
+sudo docker run -d --rm --name test-running kernel-build-container:gcc-12 tail -f /dev/null
+coverage run -a --branch manage_containers.py -r all
+sudo docker stop test-running
+coverage run -a --branch manage_containers.py -r all
+
 echo "Collect coverage for error handling"
 
 echo "Testing without options..."
@@ -93,13 +100,6 @@ coverage run -a --branch manage_containers.py -a clang-invalid && exit 1
 echo "Testing unknown options..."
 coverage run -a --branch manage_containers.py --unknown-flag && exit 1 
 coverage run -a --branch manage_containers.py -a gcc-4.9 --unknown-flag && exit 1 
-
-echo "Testing removal with running containers..."
-coverage run -a --branch manage_containers.py -a gcc-12
-sudo docker run -d --rm --name test-running kernel-build-container:gcc-12 tail -f /dev/null
-coverage run -a --branch manage_containers.py -r all && exit 1 
-sudo docker stop test-running
-coverage run -a --branch manage_containers.py -r all
 
 echo "All tests completed. Creating report"
 coverage report --omit='/usr/lib/python3/dist-packages/*'

@@ -81,8 +81,9 @@ class Container:
         """Removes the Docker container if it exists and not running"""
         running = subprocess.run(f"{Container.sudo} docker ps | "
                                  f"grep -E 'kernel-build-container:"
-                                  "(gcc-{self.gcc}|clang-{self.clang})' || true",
+                                 f"(gcc-{self.gcc}|clang-{self.clang})' || true",
                                  shell=True, text=True, check=True, stdout=subprocess.PIPE).stdout
+        print("AAAAAA", len(running))
         if not running:
             subprocess.run([self.sudo, 'docker', 'rmi', '-f', self.id],
                             text=True, check=True)
