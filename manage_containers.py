@@ -73,10 +73,15 @@ class Container:
         self.check()
 
     def rm(self):
-        """Removes the Docker container if it exists"""      
-        subprocess.run([self.sudo, 'docker', 'rmi', '-f', self.id],
-                        text=True, check=True)
-        self.check()
+        """Removes the Docker container if it exists"""
+        running = subprocess.run(f"{Container.sudo} docker ps | grep -E 'kernel-build-container:(gcc-{self.gcc}|clang-{self.clang})' || true", 
+                        shell=True, text=True, check=True, stdout=subprocess.PIPE).stdout
+        if not running:
+            subprocess.run([self.sudo, 'docker', 'rmi', '-f', self.id],
+                            text=True, check=True)
+            self.check()
+            return ''
+        return running
 
     def check(self):
         """Checks if the Docker container exists and chains id to the class"""
@@ -103,7 +108,7 @@ def add_handler(needed_compiler, containers):
     if needed_compiler == 'all':
         for c in containers:
             if not c.id:
-                print(f'Adding {c.ubuntu} container with gcc {c.gcc} and clang {c.clang}')
+                print(f'Adding ubuntu {c.ubuntu} container with gcc {c.gcc} and clang {c.clang}')
                 c.add()
         return
     for c in containers:
@@ -123,17 +128,13 @@ def add_handler(needed_compiler, containers):
 
 def remove_handler(removed_compiler, containers) -> None:
     """Removes the specified container(s) based on the provided compiler"""
-    running = subprocess.run(f"{Container.sudo} docker ps"
-                              " | grep 'kernel-build-container' | awk '{{print $1}}'",shell=True, 
-                             text=True, check=True, stdout=subprocess.PIPE).stdout.split()
-
-    if running:
-        sys.exit('You still have running containers:\n' + '\n'.join(running))
+    out = ''
     for c in containers:
         if c.id:
-            print(f'Removing container for {removed_compiler} on '
-                  f'{c.ubuntu} with gcc {c.gcc} and clang {c.clang}')
-            c.rm()
+            print(f'Removing container on {c.ubuntu} with gcc {c.gcc} and clang {c.clang}')
+            out = out + c.rm()
+    if out:
+        print('\nyou still have running containers, that can\'t be removed:\n', out)
 
 def list_containers(containers):
     """Print built containers"""
