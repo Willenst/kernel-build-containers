@@ -6,8 +6,8 @@ set -e
 echo "Cleaning coverage cache"
 coverage erase
 
-echo "Testing without options..."
-coverage run -a --branch manage_containers.py && exit 1
+echo "Testing help command..."
+coverage run -a --branch manage_containers.py -h
 
 echo "Testing adding..."
 coverage run -a --branch manage_containers.py -a gcc-5
@@ -57,8 +57,18 @@ coverage run -a --branch manage_containers.py -a all
 coverage run -a --branch manage_containers.py -l
 coverage run -a --branch manage_containers.py -r all
 coverage run -a --branch manage_containers.py -l
+
+echo "Collect coverage for error handling"
+
+echo "Testing without options..."
+coverage run -a --branch manage_containers.py && exit 1
+
+
+echo "Testing list option with add and write..."
 coverage run -a --branch manage_containers.py -a all -l && exit 1
 coverage run -a --branch manage_containers.py -r all -l && exit 1
+coverage run -a --branch manage_containers.py -a all -r all -l && exit 1
+coverage run -a --branch manage_containers.py -a all -r all -l -q && exit 1
 
 echo "Testing invalid arguments..."
 coverage run -a --branch manage_containers.py -a non-existent-compiler && exit 1
@@ -69,9 +79,6 @@ coverage run -a --branch manage_containers.py -a gcc-10 -r all && exit 1
 coverage run -a --branch manage_containers.py -a gcc-10 -r gcc-10 && exit 1
 coverage run -a --branch manage_containers.py -r gcc-10 && exit 1 
 coverage run -a --branch manage_containers.py -a all -r all && exit 1
-
-echo "Testing help command..."
-coverage run -a --branch manage_containers.py -h
 
 echo "Testing adding existing container..."
 coverage run -a --branch manage_containers.py -a gcc-10
