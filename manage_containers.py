@@ -12,42 +12,47 @@ import sys
 import argparse
 
 compilers = ['gcc-4.9',
-                'gcc-5',
-                'gcc-6',
-                'gcc-7',
-                'gcc-8',
-                'gcc-9',
-                'gcc-10',
-                'gcc-11',
-                'gcc-12',
-                'gcc-13',
-                'gcc-14',
-                'clang-7',
-                'clang-8',
-                'clang-9',
-                'clang-10',
-                'clang-11',
-                'clang-12',
-                'clang-13',
-                'clang-14',
-                'clang-15',
-                'clang-16',
-                'clang-17',
-                'all']
+             'gcc-5',
+             'gcc-6',
+             'gcc-7',
+             'gcc-8',
+             'gcc-9',
+             'gcc-10',
+             'gcc-11',
+             'gcc-12',
+             'gcc-13',
+             'gcc-14',
+             'clang-7',
+             'clang-8',
+             'clang-9',
+             'clang-10',
+             'clang-11',
+             'clang-12',
+             'clang-13',
+             'clang-14',
+             'clang-15',
+             'clang-16',
+             'clang-17',
+             'all']
 
 class Container:
     """
     Represents a Docker container configured for kernel building.
 
-    Attributes:
+    Class Attributes:
+        sudo (str): represents sudo command
+        quiet (bool): enable quiet option in Docker
+
+    Container Attributes:
         gcc (str): Version of GCC compiler.
         clang (str): Version of Clang compiler (optional).
         ubuntu (str): Version of Ubuntu.
         id (str): Docker image id.
-        exists (bool): Whether the container is built.
     """
+
     sudo = ''
-    quiet_option = False
+    quiet = False
+
     def __init__(self, gcc_version, clang_version, ubuntu_version):
         self.gcc = gcc_version
         self.clang = clang_version
@@ -55,27 +60,29 @@ class Container:
         self.id = self.check()
 
     def add(self):
-        """Builds the Docker container with the specified compiler"""
+        """Builds the Docker container with the specified compilers"""
         build_args = ['--build-arg', f'GCC_VERSION={self.gcc}',
-                    '--build-arg', f'UBUNTU_VERSION={self.ubuntu}',
-                    '--build-arg', f'UNAME={os.getlogin()}',
-                    '--build-arg', f'UID={os.getuid()}',
-                    '--build-arg', f'GID={os.getgid()}',
-                    '-t', f'kernel-build-container:gcc-{self.gcc}'
+                      '--build-arg', f'UBUNTU_VERSION={self.ubuntu}',
+                      '--build-arg', f'UNAME={os.getlogin()}',
+                      '--build-arg', f'UID={os.getuid()}',
+                      '--build-arg', f'GID={os.getgid()}',
+                      '-t', f'kernel-build-container:gcc-{self.gcc}'
         ]
         if self.clang:
             build_args = ['--build-arg', f'CLANG_VERSION={self.clang}']+build_args+ \
                          ['-t', f'kernel-build-container:clang-{self.clang}']
-        if self.quiet_option:
+        if self.quiet:
             build_args = build_args + ['-q']
         subprocess.run([self.sudo, 'docker', 'build', *build_args, '.'],
                         text=True, check=True)
         self.check()
 
     def rm(self):
-        """Removes the Docker container if it exists"""
-        running = subprocess.run(f"{Container.sudo} docker ps | grep -E 'kernel-build-container:(gcc-{self.gcc}|clang-{self.clang})' || true", 
-                        shell=True, text=True, check=True, stdout=subprocess.PIPE).stdout
+        """Removes the Docker container if it exists and not running"""
+        running = subprocess.run(f"{Container.sudo} docker ps | "
+                                 f"grep -E 'kernel-build-container:"
+                                  "(gcc-{self.gcc}|clang-{self.clang})' || true",
+                                 shell=True, text=True, check=True, stdout=subprocess.PIPE).stdout
         if not running:
             subprocess.run([self.sudo, 'docker', 'rmi', '-f', self.id],
                             text=True, check=True)
@@ -84,13 +91,13 @@ class Container:
         return running
 
     def check(self):
-        """Checks if the Docker container exists and chains id to the class"""
+        """Checks if the Docker container exists and parse id"""
         search = [f'kernel-build-container:gcc-{self.gcc}']
         if self.clang:
             search = [f'kernel-build-container:clang-{self.clang}']
         cmd = subprocess.run([self.sudo, 'docker', 'images', *search, '--format', '{{.ID}}'],
-                                stdout=subprocess.PIPE,
-                                text=True, check=True)
+                              stdout=subprocess.PIPE,
+                              text=True, check=True)
         self.id = cmd.stdout.strip()
         return self.id
 
@@ -104,7 +111,7 @@ def check_group():
     return 'sudo'
 
 def add_handler(needed_compiler, containers):
-    """Adds the specified container(s) based on the provided compiler"""
+    """Adds the specified container(s) based on the provided compiler or add all of them"""
     if needed_compiler == 'all':
         for c in containers:
             if not c.id:
@@ -126,8 +133,8 @@ def add_handler(needed_compiler, containers):
             c.add()
             return
 
-def remove_handler(removed_compiler, containers) -> None:
-    """Removes the specified container(s) based on the provided compiler"""
+def remove_handler(containers) -> None:
+    """Removes container images"""
     out = ''
     for c in containers:
         if c.id:
@@ -169,7 +176,7 @@ def main():
 
     Container.sudo = check_group()
     if args.quiet:
-        Container.quiet_option = True
+        Container.quiet = True
 
     containers = []
     containers += [Container("4.9", "5.0", "16.04")]
@@ -190,11 +197,11 @@ def main():
         list_containers(containers)
 
     if args.add:
-        add_handler(args.add,containers)
+        add_handler(args.add, containers)
         list_containers(containers)
 
     if args.remove:
-        remove_handler(args.remove,containers)
+        remove_handler(containers)
         list_containers(containers)
 
 if __name__ == '__main__':

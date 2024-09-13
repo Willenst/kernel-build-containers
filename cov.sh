@@ -63,7 +63,6 @@ echo "Collect coverage for error handling"
 echo "Testing without options..."
 coverage run -a --branch manage_containers.py && exit 1
 
-
 echo "Testing list option with add and write..."
 coverage run -a --branch manage_containers.py -a all -l && exit 1
 coverage run -a --branch manage_containers.py -r all -l && exit 1
@@ -81,7 +80,7 @@ coverage run -a --branch manage_containers.py -r gcc-10 && exit 1
 coverage run -a --branch manage_containers.py -a all -r all && exit 1
 
 echo "Testing adding existing container..."
-coverage run -a --branch manage_containers.py -a gcc-10docker
+coverage run -a --branch manage_containers.py -a gcc-10
 coverage run -a --branch manage_containers.py -a gcc-10 && exit 1
 coverage run -a --branch manage_containers.py -a gcc-12
 coverage run -a --branch manage_containers.py -a clang-13 && exit 1
@@ -95,7 +94,6 @@ echo "Testing unknown options..."
 coverage run -a --branch manage_containers.py --unknown-flag && exit 1 
 coverage run -a --branch manage_containers.py -a gcc-4.9 --unknown-flag && exit 1 
 
-# Test removing with a running container
 echo "Testing removal with running containers..."
 coverage run -a --branch manage_containers.py -a gcc-12
 sudo docker run -d --rm --name test-running kernel-build-container:gcc-12 tail -f /dev/null
