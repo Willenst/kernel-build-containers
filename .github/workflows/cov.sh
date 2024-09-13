@@ -3,9 +3,6 @@
 set -x
 set -e
 
-echo "Cleaning coverage cache"
-coverage erase
-
 echo "Testing help command..."
 coverage run -a --branch manage_containers.py -h
 
