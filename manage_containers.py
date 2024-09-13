@@ -128,12 +128,13 @@ def add_handler(needed_compiler, containers):
 
 def remove_handler(removed_compiler, containers) -> None:
     """Removes the specified container(s) based on the provided compiler"""
-    out = '\nyou still have running containers, that can\'t be removed:\n'
+    out = ''
     for c in containers:
         if c.id:
             print(f'Removing container on {c.ubuntu} with gcc {c.gcc} and clang {c.clang}')
             out = out + c.rm()
-    print(out)
+    if out:
+        print('\nyou still have running containers, that can\'t be removed:\n', out)
 
 def list_containers(containers):
         for c in containers:
