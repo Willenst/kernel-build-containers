@@ -168,7 +168,7 @@ def main():
     parser.add_argument('-r', '--remove', choices = ['all'], metavar = 'all',
                         help = 'remove all created containers')
     parser.add_argument('-q','--quiet', action = 'store_true',
-                        help = 'Suppress container build output')
+                        help = 'suppress container build output')
     args = parser.parse_args()
 
     if not any([args.list, args.add, args.remove, args.quiet]):
