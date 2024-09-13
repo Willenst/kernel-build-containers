@@ -27,4 +27,4 @@ jobs:
     - name: Run the functional tests and collect the coverage
       run: |
         pip install coverage
-        sh .github/workflows/functional_test.sh
+        sh .github/workflows/cov.sh
