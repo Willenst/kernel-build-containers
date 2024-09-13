@@ -25,5 +25,5 @@ jobs:
 
     - name: Run the functional tests and collect the coverage
       run: |
-        pip install coverage
+        sudo pip install coverage
         sudo sh cov.sh
