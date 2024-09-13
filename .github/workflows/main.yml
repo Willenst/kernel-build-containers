@@ -7,16 +7,13 @@ on:
 jobs:
   functional_test:
     runs-on: ubuntu-latest
-    strategy:
-      max-parallel: 1
-      fail-fast: false
-      matrix:
-        python-version: ['3.12']
-
+    services:
+      docker:
+        image: docker:20.10-dind
+        options: --privileged
     steps:
-
-    - name: Add user to Docker group
-      run: sudo usermod -aG docker $USER
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
 
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
@@ -26,7 +23,9 @@ jobs:
     - name: Get source code for collecting coverage
       uses: actions/checkout@v4
 
+    - name: Install dependencies
+      run: pip install coverage
+
     - name: Run the functional tests and collect the coverage
-      run: |
-        pip install coverage
-        sh .github/workflows/cov.sh
+      run: sh .github/workflows/cov.sh
+
