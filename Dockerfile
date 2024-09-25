@@ -6,7 +6,11 @@ ARG CLANG_VERSION
 RUN set -x && echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections && \
     apt-get update && \
     apt-get install -y -q apt-utils dialog && \
+<<<<<<< HEAD
     apt-get install -y -q sudo aptitude flex bison libncurses5-dev make git exuberant-ctags sparse bc libssl-dev libelf-dev bsdmainutils dwarves cpio && \
+=======
+    apt-get install -y -q sudo aptitude flex bison cpio libncurses5-dev make git exuberant-ctags sparse bc libssl-dev libelf-dev bsdmainutils dwarves xz-utils && \
+>>>>>>> merge2
     if [ "$GCC_VERSION" ]; then \
       apt-get install -y -q gcc-${GCC_VERSION} g++-${GCC_VERSION} gcc-${GCC_VERSION}-plugin-dev \
         gcc-${GCC_VERSION}-aarch64-linux-gnu g++-${GCC_VERSION}-aarch64-linux-gnu \
@@ -16,8 +20,13 @@ RUN set -x && echo 'debconf debconf/frontend select Noninteractive' | debconf-se
       fi \
     fi; \
     if [ "$CLANG_VERSION" ]; then \
+<<<<<<< HEAD
       if [ "$CLANG_VERSION" != "5.0" ] && [ "$CLANG_VERSION" != "6.0" ]; then \
         apt-get install -y -q clang-${CLANG_VERSION} lld-${CLANG_VERSION} clang-tools-${CLANG_VERSION}; \
+=======
+      if [ "$CLANG_VERSION" != "5.0" ]; then \
+      apt-get install -y -q clang-${CLANG_VERSION} lld-${CLANG_VERSION} clang-tools-${CLANG_VERSION}; \
+>>>>>>> merge2
         else \
         apt-get install -y -q clang-${CLANG_VERSION} lld-${CLANG_VERSION} clang-tools-6.0; \
       fi \
@@ -44,6 +53,7 @@ RUN set -x && \
     if [ "$CLANG_VERSION" ]; then \
       sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${CLANG_VERSION} 100 && \
       sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${CLANG_VERSION} 100; \
+      sudo update-alternatives --install /usr/bin/lld lld /usr/bin/lld-${CLANG_VERSION} 100; \
     fi
 
 USER ${UNAME}
