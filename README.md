@@ -347,8 +347,4 @@ python manage_containers.py -r all
 ./cov.sh
 ```
 
-<<<<<<< HEAD
 Results will be stored in htmlcov/index.html
-=======
-Results will be stored in htmlcov/index.html
->>>>>>> merge2
