@@ -72,20 +72,28 @@ class Container:
         find = rf'(kernel-build-container:gcc-{self.gcc}|kernel-build-container:clang-{self.clang})'
         running = re.findall(find, out)
         if not running:
-            cmd = self.runtime_cmd + ['rmi', '-f', self.id]
-            subprocess.run(cmd, text=True, check=True)
+            cmd1 = self.runtime_cmd + ['rmi', '-f', f'kernel-build-container:gcc-{self.gcc}']
+            subprocess.run(cmd1, text=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            cmd2 = self.runtime_cmd + ['rmi', '-f', f'kernel-build-container:clang-{self.clang}']
+            subprocess.run(cmd2, text=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             self.check()
             return ''
         return '\n'.join(running)
 
     def check(self):
         """Check whether the container exists and get its image ID"""
-        cmd = self.runtime_cmd + ['images', f'kernel-build-container:clang-{self.clang}',
+        cmd1 = self.runtime_cmd + ['images', f'kernel-build-container:clang-{self.clang}',
                                   '--format', '{{.ID}}']
-        out = subprocess.run(cmd, text=True, check=True, stdout=subprocess.PIPE)
-        self.id = out.stdout.strip()
-        return self.id
+        out1 = subprocess.run(cmd1, text=True, check=True, stdout=subprocess.PIPE).stdout.strip()
 
+        cmd2 = self.runtime_cmd + ['images', f'kernel-build-container:gcc-{self.gcc}',
+                                  '--format', '{{.ID}}']
+        out2 = subprocess.run(cmd2, text=True, check=True, stdout=subprocess.PIPE).stdout.strip()
+        if out1==out2: # Should address cases where a container with same gcc is created
+            self.id = out1
+        else:
+            self.id = ''
+        return self.id
     def identify_runtime_cmd(self):
         """Identify the commands for working with the container runtime"""
         try:
@@ -123,7 +131,7 @@ def remove_containers(containers):
     for c in containers:
         if c.id:
             print(f'Removing Ubuntu-{c.ubuntu} container with GCC-{c.gcc} and Clang-{c.clang}')
-            out = out + c.rm()
+        out = out + c.rm()
     if out:
         print('\nYou still have running containers, that can\'t be removed:\n'+out)
 
