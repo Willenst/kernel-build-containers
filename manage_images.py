@@ -77,12 +77,18 @@ class ContainerImage:
         if not self.id:
             return
         print(f'\nRemove the container image providing Clang {self.clang} and GCC {self.gcc}')
-        try:
-            cmd = self.runtime_cmd + ['rmi', '-f', self.id]
-            subprocess.run(cmd, text=True, check=True)
-        except subprocess.CalledProcessError:
-            print('[!] WARNING: Image removal failed, see the error message above')
-        self.id = self.find_id()
+        full_id = subprocess.run(self.runtime_cmd + ['inspect', f'{self.id}', '--format', '{{.ID}}']) # for later podman compatabilty
+        cmd = self.runtime_cmd + ['ps', '-a', '--filter', f'ancestor={full_id}', '--format', '{{.ID}}']
+        container_id = subprocess.run(cmd, text=True, check=True, stdout=subprocess.PIPE).stdout.strip()
+        if container_id:
+            try:
+                cmd = self.runtime_cmd + ['rmi', '-f', self.id]
+                subprocess.run(cmd, text=True, check=True)
+            except subprocess.CalledProcessError:
+                print('[!] WARNING: Image removal failed, see the error message above')
+            self.id = self.find_id()
+        else:
+            print(f'[!] WARNING: Image removal failed, {self.id} still in use')
 
     def find_id(self):
         """Find the ID of the container image. Return an empty string if it doesn't exist."""
@@ -123,13 +129,14 @@ def build_images(needed_compiler, images):
                 # We need only one container image providing this compiler
                 return
 
-def remove_images(images):
+def remove_images(needed_compiler, images):
     """Remove all container images"""
     fail_cnt = 0
     for c in images:
-        c.rm()
-        if c.id:
-            fail_cnt += 1
+        if needed_compiler in ('all', 'clang-' + c.clang, 'gcc-' + c.gcc):
+            c.rm()
+            if c.id:
+                fail_cnt += 1
     if fail_cnt:
         print(f'\n[!] WARNING: failed to remove {fail_cnt} container image(s), see the log above')
 
@@ -153,8 +160,9 @@ def main():
                               '(use "all" for building all images)')
     parser.add_argument('-q', '--quiet', action='store_true',
                         help='suppress the container image build output (for using with --build)')
-    parser.add_argument('-r', '--remove', action='store_true',
-                        help='remove all created images')
+    parser.add_argument('-r', '--remove',nargs='?', const='all', choices=supported_compilers, metavar='compiler',
+                        help=f'build a container image providing {" / ".join(supported_compilers)} '
+                              '(default = "all" for removing all images)')
     args = parser.parse_args()
 
     if not any((args.list, args.build, args.remove)):
@@ -194,7 +202,7 @@ def main():
         sys.exit(0)
 
     if args.remove:
-        remove_images(images)
+        remove_images(args.remove, images)
         list_images(images)
         sys.exit(0)
 
