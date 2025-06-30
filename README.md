@@ -80,6 +80,12 @@ __Build a single container image:__
 $ python3 manage_images.py -b gcc-12
 ```
 
+__Build multiple container images:__
+
+```console
+$ python3 manage_images.py -b gcc-8 gcc-9
+```
+
 __Build a container image quietly:__
 
 ```console
@@ -370,6 +376,18 @@ $ python3 build_linux.py -a arm64 -k ~/linux-stable/experiment.config -s ~/linux
 ```
 
 ## How to remove the created container images
+
+__Remove single image:__
+
+```console
+$ python3 manage_images.py -r gcc-12
+```
+
+__Remove multiple images:__
+
+```console
+$ python3 manage_images.py -r gcc-8 gcc-9
+```
 
 __Remove all created images:__
 
