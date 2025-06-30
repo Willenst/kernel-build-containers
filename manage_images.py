@@ -156,25 +156,25 @@ def main():
     parser = argparse.ArgumentParser(description='Manage the images for kernel-build-containers')
     parser.add_argument('-l', '--list', action='store_true',
                         help='show the container images and their IDs')
-    parser.add_argument('-b', '--build', choices=supported_compilers, metavar='compiler',
+    parser.add_argument('-b', '--build', nargs = '*', metavar = 'compiler(s)',
                         help=f'build a container image providing {" / ".join(supported_compilers)} '
                               '(use "all" for building all images)')
     parser.add_argument('-q', '--quiet', action='store_true',
                         help='suppress the container image build output (for using with --build)')
-    parser.add_argument('-r', '--remove',nargs='?', const='all', choices=supported_compilers, metavar='compiler',
+    parser.add_argument('-r', '--remove', nargs = '*', metavar = 'compiler(s)',
                         help=f'remove a container image providing {" / ".join(supported_compilers)} '
                               '(default = "all" for removing all images)')
     args = parser.parse_args()
 
-    if not any((args.list, args.build, args.remove)):
+    if not any((args.list, args.build is not None, args.remove is not None)):
         parser.print_help()
         sys.exit(1)
 
-    if bool(args.list) + bool(args.build) + bool(args.remove) > 1:
+    if bool(args.list) + bool(args.build is not None) + bool(args.remove is not None) > 1:
         sys.exit('[!] ERROR: Invalid combination of options')
 
     if args.quiet:
-        if not args.build:
+        if not args.build is not None:
             sys.exit('[!] ERROR: "--quiet" should be used only with the "--build" option')
         ContainerImage.quiet = True
 
@@ -197,15 +197,22 @@ def main():
         list_images(images)
         sys.exit(0)
 
-    if args.build:
-        build_images(args.build, images)
-        list_images(images)
-        sys.exit(0)
+    if args.build is not None:
+        if not args.build:
+            args.build = ['all']
+        for arg in args.build:
+            build_images(arg, images)
+            list_images(images)
+            sys.exit(0)
 
-    if args.remove:
-        remove_images(args.remove, images)
-        list_images(images)
-        sys.exit(0)
+    if args.remove is not None:
+        if not args.remove:
+            args.remove = ['all']
+        for arg in args.remove:
+            print(arg)
+            remove_images(arg, images)
+            list_images(images)
+            sys.exit(0)
 
 if __name__ == '__main__':
     main()
