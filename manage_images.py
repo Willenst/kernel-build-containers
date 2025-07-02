@@ -228,18 +228,26 @@ def main():
         if not args.build:
             args.build = ['all']
         for arg in args.build:
+            if arg not in supported_compilers:
+                list_images(images)
+                print(f'[!] ERROR: {arg} is not supported!')
+                sys.exit(1)
             build_images(arg, images)
-            list_images(images)
-            sys.exit(0)
+        list_images(images)
+        sys.exit(0)
 
     if args.remove is not None:
         if not args.remove:
             args.remove = ['all']
         for arg in args.remove:
+            if arg not in supported_compilers:
+                list_images(images)
+                print(f'[!] ERROR: {arg} is not supported!')
+                sys.exit(1)
             print(arg)
             remove_images(arg, images)
-            list_images(images)
-            sys.exit(0)
+        list_images(images)
+        sys.exit(0)
 
 if __name__ == '__main__':
     main()
