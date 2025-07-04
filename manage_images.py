@@ -39,8 +39,10 @@ class ContainerImage:
     quiet = False
 
     def __init__(self, clang_version, gcc_version, ubuntu_version):
+
         if not ContainerImage.runtime_cmd:
             ContainerImage.runtime_cmd = self.identify_runtime_cmd()
+
         self.clang = clang_version
         self.clang_tag = 'kernel-build-container:clang-' + self.clang
         self.gcc = gcc_version
@@ -50,10 +52,15 @@ class ContainerImage:
 
     def build(self):
         """Build a container image that provides the specified compilers"""
+
+        build_dir = ['.']
+
         print(f'\nBuild a container image providing Clang {self.clang} and GCC {self.gcc}')
+
         if self.id:
-            print(f'[!] WARNING: Container image already exists ({self.id}), skip building')
+            print(f'[!] WARNING: Container image {self.id} already exists, skip building')
             return
+
         build_args = ['build',
                       '--build-arg', f'CLANG_VERSION={self.clang}',
                       '--build-arg', f'GCC_VERSION={self.gcc}',
@@ -64,31 +71,47 @@ class ContainerImage:
                       '--build-arg', f'GID={os.getgid()}',
                       '-t', self.clang_tag,
                       '-t', self.gcc_tag]
+
         if self.quiet:
             print('[!] INFO: Quiet mode, please wait...')
             build_args += ['-q']
-        build_dir = ['.']
+
         cmd = self.runtime_cmd + build_args + build_dir
         subprocess.run(cmd, text=True, check=True)
         self.id = self.find_id()
 
     def rm(self):
         """Try to remove the container image if it exists"""
+
         if not self.id:
             return
-        print(f'\nRemove the container image providing Clang {self.clang} and GCC {self.gcc}')
-        try:
-            cmd = self.runtime_cmd + ['rmi', '-f', self.id]
-            subprocess.run(cmd, text=True, check=True)
-        except subprocess.CalledProcessError:
-            print('[!] WARNING: Image removal failed, see the error message above')
-        self.id = self.find_id()
+
+        print(f'\nRemove the container image {self.id} providing Clang {self.clang} and GCC {self.gcc}')
+
+        full_cmd = self.runtime_cmd + ['inspect', f'{self.id}', '--format', '{{.ID}}']
+        full_id = subprocess.run(full_cmd, text=True, check=True, stdout=subprocess.PIPE).stdout # for later podman compatabilty
+        cmd = self.runtime_cmd + ['ps', '-a', '--filter', f'ancestor={full_id}', '--format', '{{.ID}}']
+        container_id = subprocess.run(cmd, text=True, check=True, stdout=subprocess.PIPE).stdout.strip()
+
+        if not container_id:
+            try:
+                cmd = self.runtime_cmd + ['rmi', '-f', self.id]
+                subprocess.run(cmd, text=True, check=True)
+
+            except subprocess.CalledProcessError:
+                print('[!] WARNING: Image removal failed, see the error message above')
+
+            self.id = self.find_id()
+        else:
+            print(f'[!] WARNING: Image removal failed, {self.id} still in use')
 
     def find_id(self):
-        """Find the ID of the container image. Return an empty string if it doesn't exist."""
+        """Find the ID of the container image. Return an empty string if it doesn't exist"""
+
         find_clang_cmd = self.runtime_cmd + ['images', self.clang_tag, '--format', '{{.ID}}']
         out = subprocess.run(find_clang_cmd, text=True, check=True, stdout=subprocess.PIPE)
         clang_id = out.stdout.strip()
+
         if clang_id:
             find_gcc_cmd = self.runtime_cmd + ['images', self.gcc_tag, '--format', '{{.ID}}']
             out = subprocess.run(find_gcc_cmd, text=True, check=True, stdout=subprocess.PIPE)
@@ -97,24 +120,30 @@ class ContainerImage:
             if not gcc_id:
                 sys.exit(f'[!] ERROR: Invalid image "{self.clang_tag}" ' \
                           'without the corresponding GCC tag, remove it manually')
+
         return clang_id
 
     def identify_runtime_cmd(self):
         """Identify the commands for working with the container runtime"""
+
         try:
             cmd = ['docker', 'ps']
             out = subprocess.run(cmd, text=True, check=False, capture_output=True)
+
             if out.returncode == 0:
                 return ['docker']
             if 'permission denied' in out.stderr:
                 print('We need "sudo" for working with containers')
                 return ['sudo', 'docker']
+
             sys.exit(f'[!] ERROR: Testing "{" ".join(cmd)}" gives unknown error:\n{out.stderr}')
+
         except FileNotFoundError:
             sys.exit('[!] ERROR: The container runtime is not installed')
 
 def build_images(needed_compiler, images):
     """Build container images providing the specified compilers"""
+
     for c in images:
         if needed_compiler in ('all', 'clang-' + c.clang, 'gcc-' + c.gcc):
             # Special case for GCC: build the *first* known container image providing this compiler
@@ -123,13 +152,17 @@ def build_images(needed_compiler, images):
                 # We need only one container image providing this compiler
                 return
 
-def remove_images(images):
+def remove_images(needed_compiler, images):
     """Remove all container images"""
+
     fail_cnt = 0
+
     for c in images:
-        c.rm()
-        if c.id:
-            fail_cnt += 1
+        if needed_compiler in ('all', 'clang-' + c.clang, 'gcc-' + c.gcc):
+            c.rm()
+            if c.id:
+                fail_cnt += 1
+
     if fail_cnt:
         print(f'\n[!] WARNING: failed to remove {fail_cnt} container image(s), see the log above')
 
@@ -139,33 +172,36 @@ def list_images(images):
     print('-' * 41)
     print(f' {"Ubuntu":<6} | {"Clang":<6} | {"GCC":<6} | {"Image ID"}')
     print('-' * 41)
+
     for c in images:
         print(f' {c.ubuntu:<6} | {c.clang:<6} | {c.gcc:<6} | {c.id if c.id else "-"}')
+
     print('-' * 41)
 
 def main():
     """The main function for managing the images for kernel-build-containers"""
-    parser = argparse.ArgumentParser(description='Manage the images for kernel-build-containers')
-    parser.add_argument('-l', '--list', action='store_true',
+    parser = argparse.ArgumentParser(description = 'Manage the images for kernel-build-containers')
+    parser.add_argument('-l', '--list', action = 'store_true',
                         help='show the container images and their IDs')
-    parser.add_argument('-b', '--build', choices=supported_compilers, metavar='compiler',
+    parser.add_argument('-b', '--build', nargs = '*', metavar = 'compiler(s)',
                         help=f'build a container image providing {" / ".join(supported_compilers)} '
                               '(use "all" for building all images)')
-    parser.add_argument('-q', '--quiet', action='store_true',
+    parser.add_argument('-q', '--quiet', action = 'store_true',
                         help='suppress the container image build output (for using with --build)')
-    parser.add_argument('-r', '--remove', action='store_true',
-                        help='remove all created images')
+    parser.add_argument('-r', '--remove', nargs = '*', metavar = 'compiler(s)',
+                        help=f'remove a container image providing {" / ".join(supported_compilers)} '
+                              '(default = "all" for removing all images)')
     args = parser.parse_args()
 
-    if not any((args.list, args.build, args.remove)):
+    if not any((args.list, args.build is not None, args.remove is not None)):
         parser.print_help()
         sys.exit(1)
 
-    if bool(args.list) + bool(args.build) + bool(args.remove) > 1:
+    if bool(args.list) + bool(args.build is not None) + bool(args.remove is not None) > 1:
         sys.exit('[!] ERROR: Invalid combination of options')
 
     if args.quiet:
-        if not args.build:
+        if not args.build is not None:
             sys.exit('[!] ERROR: "--quiet" should be used only with the "--build" option')
         ContainerImage.quiet = True
 
@@ -188,13 +224,28 @@ def main():
         list_images(images)
         sys.exit(0)
 
-    if args.build:
-        build_images(args.build, images)
+    if args.build is not None:
+        if not args.build:
+            args.build = ['all']
+        for arg in args.build:
+            if arg not in supported_compilers:
+                list_images(images)
+                print(f'[!] ERROR: {arg} is not supported!')
+                sys.exit(1)
+            build_images(arg, images)
         list_images(images)
         sys.exit(0)
 
-    if args.remove:
-        remove_images(images)
+    if args.remove is not None:
+        if not args.remove:
+            args.remove = ['all']
+        for arg in args.remove:
+            if arg not in supported_compilers:
+                list_images(images)
+                print(f'[!] ERROR: {arg} is not supported!')
+                sys.exit(1)
+            print(arg)
+            remove_images(arg, images)
         list_images(images)
         sys.exit(0)
 
