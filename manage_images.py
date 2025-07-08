@@ -15,8 +15,7 @@ supported_compilers = ['clang-5', 'clang-6', 'clang-7', 'clang-8',
                        'clang-9', 'clang-10', 'clang-11', 'clang-12',
                        'clang-13', 'clang-14', 'clang-15', 'clang-16', 'clang-17',
                        'gcc-4.9', 'gcc-5', 'gcc-6', 'gcc-7', 'gcc-8', 'gcc-9',
-                       'gcc-10', 'gcc-11', 'gcc-12', 'gcc-13', 'gcc-14',
-                       'all']
+                       'gcc-10', 'gcc-11', 'gcc-12', 'gcc-13', 'gcc-14']
 
 class ContainerImage:
     """
@@ -120,23 +119,18 @@ class ContainerImage:
 def build_images(needed_compiler, images):
     """Build container images providing the specified compilers"""
     for c in images:
-        if needed_compiler in ('all', 'clang-' + c.clang, 'gcc-' + c.gcc):
-            # Special case for GCC: build the *first* known container image providing this compiler
+        if needed_compiler in ('clang-' + c.clang, 'gcc-' + c.gcc):
             c.build()
-            if needed_compiler != 'all':
-                # We need only one container image providing this compiler
-                return
+            return
 
 def remove_images(needed_compiler, images):
     """Remove all container images"""
-    fail_cnt = 0
     for c in images:
-        if needed_compiler in ('all', 'clang-' + c.clang, 'gcc-' + c.gcc):
+        if needed_compiler in ('clang-' + c.clang, 'gcc-' + c.gcc):
             c.rm()
             if c.id:
-                fail_cnt += 1
-    if fail_cnt:
-        print(f'\n[!] WARNING: failed to remove {fail_cnt} container image(s), see the log above')
+                print(f'\n[!] WARNING: failed to remove {needed_compiler} container image(s), see the log above')
+            return
 
 def list_images(images):
     """Show the images and their IDs"""
@@ -196,22 +190,22 @@ def main():
 
     if args.build is not None:
         if not args.build:
-            args.build = ['all']
+            for c in images:
+                c.build()
         for arg in args.build:
             if arg not in supported_compilers:
                 list_images(images)
-                print(f'[!] ERROR: {arg} is not supported!')
-                sys.exit(1)
+                sys.exit(f'[!] ERROR: {arg} is not supported!')
             build_images(arg, images)
 
     if args.remove is not None:
         if not args.remove:
-            args.remove = ['all']
+            for c in images:
+                c.rm()
         for arg in args.remove:
             if arg not in supported_compilers:
                 list_images(images)
-                print(f'[!] ERROR: {arg} is not supported!')
-                sys.exit(1)
+                sys.exit(f'[!] ERROR: {arg} is not supported!')
             remove_images(arg, images)
 
     list_images(images)
