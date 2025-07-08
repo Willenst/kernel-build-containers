@@ -58,26 +58,32 @@ __Get help:__
 
 ```console
 $ python3 manage_images.py -h
-usage: manage_images.py [-h] [-l] [-b compiler] [-q] [-r]
+usage: manage_images.py [-h] [-l] [-b [compiler(s) ...]] [-q] [-r [compiler(s) ...]]
 
 Manage the images for kernel-build-containers
 
 options:
   -h, --help            show this help message and exit
   -l, --list            show the container images and their IDs
-  -b, --build compiler  build a container image providing clang-5 / clang-6 / clang-7 /
-                        clang-8 / clang-9 / clang-10 / clang-11 / clang-12 / clang-13 /
-                        clang-14 / clang-15 / clang-16 / clang-17 /
-                        gcc-4.9 / gcc-5 / gcc-6 / gcc-7 / gcc-8 / gcc-9 / gcc-10 / gcc-11 /
-                        gcc-12 / gcc-13 / gcc-14 / all (use "all" for building all images)
+  -b [compiler(s) ...], --build [compiler(s) ...]
+                        build a container image providing clang-5 / clang-6 / clang-7 / clang-8 / clang-9 / clang-10 / clang-11 / clang-12 / clang-13 / clang-14 / clang-15 / clang-16 / clang-17 /
+                        gcc-4.9 / gcc-5 / gcc-6 / gcc-7 / gcc-8 / gcc-9 / gcc-10 / gcc-11 / gcc-12 / gcc-13 / gcc-14 (default = "all" images if no compilers are specified)
   -q, --quiet           suppress the container image build output (for using with --build)
-  -r, --remove          remove all created images
+  -r [compiler(s) ...], --remove [compiler(s) ...]
+                        remove a container image providing clang-5 / clang-6 / clang-7 / clang-8 / clang-9 / clang-10 / clang-11 / clang-12 / clang-13 / clang-14 / clang-15 / clang-16 / clang-17 /
+                        gcc-4.9 / gcc-5 / gcc-6 / gcc-7 / gcc-8 / gcc-9 / gcc-10 / gcc-11 / gcc-12 / gcc-13 / gcc-14 (default = "all" images if no compilers are specified)
 ```
 
 __Build a single container image:__
 
 ```console
 $ python3 manage_images.py -b gcc-12
+```
+
+__Build multiple container images:__
+
+```console
+$ python3 manage_images.py -b gcc-8 gcc-9
 ```
 
 __Build a container image quietly:__
@@ -115,7 +121,7 @@ Current status:
 __Build all container images:__
 
 ```console
-$ python3 manage_images.py -b all
+$ python3 manage_images.py -b
 ```
 
 __Expected output after building all images:__
@@ -370,6 +376,18 @@ $ python3 build_linux.py -a arm64 -k ~/linux-stable/experiment.config -s ~/linux
 ```
 
 ## How to remove the created container images
+
+__Remove single image:__
+
+```console
+$ python3 manage_images.py -r gcc-12
+```
+
+__Remove multiple images:__
+
+```console
+$ python3 manage_images.py -r gcc-8 gcc-9
+```
 
 __Remove all created images:__
 
