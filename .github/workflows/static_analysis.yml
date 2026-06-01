@@ -5,9 +5,9 @@ permissions:
 
 on:
   push:
-    branches: [ master ]
+    branches: [ CI_integration_test ]
   pull_request:
-    branches: [ master ]
+    branches: [ CI_integration_test ]
 
 jobs:
   static_analysis:
