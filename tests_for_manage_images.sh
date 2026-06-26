@@ -6,6 +6,11 @@ DELIMITER="\n##############################################"
 RUNTIME_FLAG=""
 RUNTIME=""
 SUDO_CMD=""
+FAST=0
+
+if [ "${1:-}" = "--fast" ]; then
+	FAST=1
+fi
 
 check_if_sudo_needed() {
 	set +e
@@ -165,25 +170,48 @@ run_tests() {
 	run_error_handling_tests
 }
 
+run_fast_tests() {
+	check_if_sudo_needed
+	clear_state
+
+	echo -e "$DELIMITER"
+	echo "Testing build, list, and removal..."
+	python3 -m coverage run -a --branch manage_images.py -b gcc-8 $RUNTIME_FLAG
+	python3 -m coverage run -a --branch manage_images.py -l $RUNTIME_FLAG
+	python3 -m coverage run -a --branch manage_images.py -r gcc-8 $RUNTIME_FLAG
+}
+
 echo "Let's test manage_images.py..."
 python3 -m coverage erase
 
-# Test Docker as a default container runtime (without a flag)
 RUNTIME="docker"
 RUNTIME_FLAG=""
 run_tests
 
-test_with_stopped_docker_service
+# Docker selected by default still runs the full suite
+# Runtime specification goes only through build-list-remove
+if [ "$FAST" -eq 1 ]; then
+	echo -e "$DELIMITER"
+	echo "Fast mode: testing explicit Docker and Podman lifecycles..."
 
-# Test Docker
-RUNTIME="docker"
-RUNTIME_FLAG="-d"
-run_tests
+	RUNTIME="docker"
+	RUNTIME_FLAG="-d"
+	run_fast_tests
 
-# Test Podman
-RUNTIME="podman"
-RUNTIME_FLAG="-p"
-run_tests
+	RUNTIME="podman"
+	RUNTIME_FLAG="-p"
+	run_fast_tests
+else
+	test_with_stopped_docker_service
+
+	RUNTIME="docker"
+	RUNTIME_FLAG="-d"
+	run_tests
+
+	RUNTIME="podman"
+	RUNTIME_FLAG="-p"
+	run_tests
+fi
 
 echo -e "$DELIMITER"
 echo "All tests completed. Creating the coverage report..."
