@@ -10,6 +10,8 @@ FAST=0
 
 if [ "${1:-}" = "--fast" ]; then
 	FAST=1
+	mv Dockerfile Dockerfile.bak
+	cp tests/Dockerfile Dockerfile
 fi
 
 check_if_sudo_needed() {
@@ -181,40 +183,55 @@ run_fast_tests() {
 	python3 -m coverage run -a --branch manage_images.py -r gcc-8 $RUNTIME_FLAG
 }
 
-echo "Let's test manage_images.py..."
-python3 -m coverage erase
+set +e
+(
+	echo "Let's test manage_images.py..."
+	python3 -m coverage erase
 
-RUNTIME="docker"
-RUNTIME_FLAG=""
-run_tests
+	RUNTIME="docker"
+	RUNTIME_FLAG=""
+	run_tests
 
-# Docker selected by default still runs the full suite
-# Runtime specification goes only through build-list-remove
-if [ "$FAST" -eq 1 ]; then
+	# Docker selected by default still runs the full suite
+	# Runtime specification goes only through build-list-remove
+	if [ "$FAST" -eq 1 ]; then
+		echo -e "$DELIMITER"
+		echo "Fast mode: testing explicit Docker and Podman lifecycles..."
+
+		RUNTIME="docker"
+		RUNTIME_FLAG="-d"
+		run_fast_tests
+
+		RUNTIME="podman"
+		RUNTIME_FLAG="-p"
+		run_fast_tests
+	else
+		test_with_stopped_docker_service
+
+		RUNTIME="docker"
+		RUNTIME_FLAG="-d"
+		run_tests
+
+		RUNTIME="podman"
+		RUNTIME_FLAG="-p"
+		run_tests
+	fi
+
 	echo -e "$DELIMITER"
-	echo "Fast mode: testing explicit Docker and Podman lifecycles..."
+	echo "All tests completed. Creating the coverage report..."
+	python3 -m coverage report
+	python3 -m coverage html
+	echo "Well done!"
+)
+STATUS=$?
 
-	RUNTIME="docker"
-	RUNTIME_FLAG="-d"
-	run_fast_tests
-
-	RUNTIME="podman"
-	RUNTIME_FLAG="-p"
-	run_fast_tests
-else
-	test_with_stopped_docker_service
-
-	RUNTIME="docker"
-	RUNTIME_FLAG="-d"
-	run_tests
-
-	RUNTIME="podman"
-	RUNTIME_FLAG="-p"
-	run_tests
+if [ "$FAST" -eq 1 ] && [ -f Dockerfile.bak ]; then
+	mv Dockerfile.bak Dockerfile
 fi
 
-echo -e "$DELIMITER"
-echo "All tests completed. Creating the coverage report..."
-python3 -m coverage report
-python3 -m coverage html
-echo "Well done!"
+if [ "$STATUS" -ne 0 ]; then
+	echo ""
+	echo "Tests have failed!"
+	rm .coverage
+	exit "$STATUS"
+fi
