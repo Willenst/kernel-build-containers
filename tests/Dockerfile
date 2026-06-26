@@ -1,10 +1,10 @@
-FROM busybox:1.36.1
+FROM alpine:3.20
+
+RUN apk add --no-cache bash make
 
 ARG CLANG_VERSION
 ARG GCC_VERSION
 ARG UBUNTU_VERSION
-ARG UNAME
-ARG GNAME
 ARG UID
 ARG GID
 
@@ -13,8 +13,7 @@ RUN printf '%s\n' \
         "clang=${CLANG_VERSION}" \
         "gcc=${GCC_VERSION}" \
         "ubuntu=${UBUNTU_VERSION}" \
-        "user=${UNAME}" \
-        "group=${GNAME}" \
-        "uid=${UID}" \
-        "gid=${GID}" \
-        > build-id.txt
+        > /build-id
+
+USER ${UID}:${GID}
+WORKDIR /src
