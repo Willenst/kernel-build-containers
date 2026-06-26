@@ -53,8 +53,8 @@ run_basic_tests() {
 	echo -e "$DELIMITER"
 	echo "Testing building and removing all images..."
 	python3 -m coverage run -a --branch manage_images.py -b $RUNTIME_FLAG
-	python3 -m coverage run -a --branch manage_images.py -r $RUNTIME_FLAG
 	python3 -m coverage run -a --branch manage_images.py -b all $RUNTIME_FLAG
+	python3 -m coverage run -a --branch manage_images.py -r $RUNTIME_FLAG
 	python3 -m coverage run -a --branch manage_images.py -r all $RUNTIME_FLAG
 
 	echo -e "$DELIMITER"
