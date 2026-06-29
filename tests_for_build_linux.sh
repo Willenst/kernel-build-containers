@@ -23,6 +23,17 @@ declare -A EXPECTED_IMAGES=(
 	[powerpc64le]="arch/powerpc/boot/zImage"
 )
 
+FAST=0
+
+if [ "${1:-}" = "--fast" ]; then
+	FAST=1
+	ARCHS=("x86_64")
+
+	mv Dockerfile Dockerfile.bak
+	trap 'mv Dockerfile.bak Dockerfile' EXIT
+	cp tests/Dockerfile Dockerfile
+fi
+
 fail() {
 	echo "[-] $*"
 	exit 1
@@ -42,17 +53,22 @@ prepare_tests() {
 		fail "Some files left from the previous test, remove $SRC_DIR and $OUT_DIR"
 	fi
 
-	if [ ! -f "$SRC_TARBALL" ]; then
-		wget "$KERNEL" -O "$SRC_TARBALL"
-	fi
+	if [ "$FAST" -eq 1 ]; then
+		mkdir -p "$SRC_DIR" "$OUT_DIR"
+		cp tests/Makefile "$SRC_DIR/Makefile"
+	else
+		if [ ! -f "$SRC_TARBALL" ]; then
+			wget "$KERNEL" -O "$SRC_TARBALL"
+		fi
 
-	CHECKSUM=$(sha256sum "$SRC_TARBALL" | awk '{print $1}')
-	if [ "$CHECKSUM" != "$EXPECTED_CHECKSUM" ]; then
-		fail "Unexpected sha256sum of the $SRC_TARBALL, remove $SRC_TARBALL and restart the test"
-	fi
+		CHECKSUM=$(sha256sum "$SRC_TARBALL" | awk '{print $1}')
+		if [ "$CHECKSUM" != "$EXPECTED_CHECKSUM" ]; then
+			fail "Unexpected sha256sum of the $SRC_TARBALL, remove $SRC_TARBALL and restart the test"
+		fi
 
-	mkdir -p "$SRC_DIR" "$OUT_DIR"
-	tar -xf "$SRC_TARBALL" -C "$SRC_DIR" --strip-components=1
+		mkdir -p "$SRC_DIR" "$OUT_DIR"
+		tar -xf "$SRC_TARBALL" -C "$SRC_DIR" --strip-components=1
+	fi
 
 	for COMPILER in "${COMPILERS[@]}"; do
 		python3 manage_images.py -d -b "$COMPILER"
@@ -153,8 +169,14 @@ run_tests() {
 	echo -e "$DELIMITER"
 	echo "Testing interruption handling..."
 	python3 -m coverage run -a --branch build_linux.py $RUNTIME_FLAG -a "${ARCHS[0]}" -c "${COMPILERS[0]}" -s "$SRC_DIR" -o "$OUT_DIR" -- defconfig
+
+	INTERRUPT_MAKE_ARG=""
+	if [ "$FAST" -eq 1 ]; then
+		INTERRUPT_MAKE_ARG="FAKE_SLOW=1"
+	fi
+
 	expect <<EOF
-spawn python3 -m coverage run -a --branch build_linux.py -t $RUNTIME_FLAG -a "${ARCHS[0]}" -c "${COMPILERS[0]}" -s "$SRC_DIR" -o "$OUT_DIR"
+spawn python3 -m coverage run -a --branch build_linux.py -t $RUNTIME_FLAG -a "${ARCHS[0]}" -c "${COMPILERS[0]}" -s "$SRC_DIR" -o "$OUT_DIR" $INTERRUPT_MAKE_ARG
 set timeout 5
 expect {
 	timeout {
@@ -207,7 +229,7 @@ EOF
 cleanup_after_tests() {
 	rm -rf "$OUT_DIR"
 	rm -rf "$SRC_DIR"
-	rm "$SRC_TARBALL"
+	rm -f "$SRC_TARBALL"
 }
 
 
