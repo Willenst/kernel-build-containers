@@ -1,0 +1,47 @@
+name: fast tests
+
+permissions:
+  contents: read
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  fast_tests:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      max-parallel: 1
+      fail-fast: false
+      matrix:
+        python-version: ['3.14']
+
+    steps:
+
+    - name: Get the source code
+      uses: actions/checkout@v5
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install test dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install --yes wget tar expect
+        python3 -m pip install coverage
+
+    - name: Show container runtimes
+      run: |
+        docker version
+        podman version
+
+    - name: Test image management
+      run: ./tests_for_manage_images.sh --fast
+
+    - name: Test kernel building
+      run: ./tests_for_build_linux.sh --fast
