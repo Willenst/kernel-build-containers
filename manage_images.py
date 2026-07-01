@@ -23,6 +23,8 @@ supported_compilers = ['clang-5', 'clang-6', 'clang-7', 'clang-8',
                        'gcc-10', 'gcc-11', 'gcc-12', 'gcc-13', 'gcc-14', 'gcc-15', 'gcc-16',
                        'all']
 
+PODMAN_CACHE_FILE = '.podman-cache/images.tar'
+
 
 class ContainerImage:
     """
@@ -60,7 +62,7 @@ class ContainerImage:
         """Build a container image that provides the specified compilers"""
         if self.id:
             print(f'\nThe container image providing Clang {self.clang} and GCC {self.gcc} exists: {self.id}')
-            return
+            return False
 
         build_args = ['build',
                       '--build-arg', f'CLANG_VERSION={self.clang}',
@@ -88,6 +90,7 @@ class ContainerImage:
         cmd = self.runtime_cmd + build_args + build_dir
         subprocess.run(cmd, text=True, check=True)
         self.id = self.find_id()
+        return True
 
     def rm(self):
         """Try to remove the container image if it exists"""
@@ -151,13 +154,44 @@ class ContainerImage:
 
 def build_images(needed_compiler, images):
     """Build the container images providing the specified compilers"""
+    if ContainerImage.runtime == 'podman' and os.path.isfile(PODMAN_CACHE_FILE):
+        print(f'\nRestore Podman image cache from {PODMAN_CACHE_FILE}')
+        subprocess.run([*ContainerImage.runtime_cmd, 'load', '-i', PODMAN_CACHE_FILE], text=True, check=True)
+
+        for c in images:
+            c.id = c.find_id()
+
+    image_was_built = False
+
     for c in images:
         if needed_compiler in {'all', 'clang-' + c.clang, 'gcc-' + c.gcc}:
             # Special case for GCC: build the *first* known container image providing this compiler
-            c.build()
+            if c.build():
+                image_was_built = True
             if needed_compiler != 'all':
                 # We need only one container image providing this compiler
-                return
+                break
+
+    if ContainerImage.runtime == 'podman' and image_was_built:
+        os.makedirs('.podman-cache', exist_ok=True)
+
+        tags = []
+        for c in images:
+            if c.id:
+                tags += [c.clang_tag, c.gcc_tag]
+
+        tags = list(dict.fromkeys(tags))
+
+        if os.path.isfile(PODMAN_CACHE_FILE):
+            os.remove(PODMAN_CACHE_FILE)
+
+        print(f'[!] INFO: Save Podman image cache to {PODMAN_CACHE_FILE}')
+        subprocess.run([*ContainerImage.runtime_cmd, 'save',
+                        '--format', 'docker-archive',
+                        '--multi-image-archive',
+                        '-o', PODMAN_CACHE_FILE,
+                        *tags],
+                       text=True, check=True)
 
 
 def remove_images(needed_compiler, images):
