@@ -1,0 +1,42 @@
+name: tests
+
+permissions:
+  contents: read
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Get the source code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.14'
+
+    - name: Install test dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install --yes expect podman
+        python3 -m pip install coverage
+
+    - name: Use the test Dockerfile
+      run: cp tests/Dockerfile Dockerfile
+
+    - name: Test image management
+      run: ./tests_for_manage_images.sh
+
+    - name: Restore the test Dockerfile
+      run: git checkout -- Dockerfile
+
+    - name: Test kernel building
+      run: ./tests_for_build_linux.sh --fast
