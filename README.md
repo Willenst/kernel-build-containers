@@ -562,12 +562,22 @@ In that case simply stop this container and run `manage_images.py -r` again.
 
 ## Notes for developers
 
+Before running the tests, you may want to pre‑bake the cache using `heatup_for_tests.sh` to speed up the test suite.
+
 If you change `manage_images.py` or `build_linux.py`, please run the tests:
 
 ```console
 $ bash tests_for_manage_images.sh
 $ bash tests_for_build_linux.sh
 ```
+To save time or if you're using a low-performance device, you can skip the container build step by running
+```console
+$ bash tests_for_build_linux.sh --fast
+```
+
+Working with containers (especially when editing Dockerfiles) can consume an incredible amount of system memory. We recommend clearing the caches at the end using
+`podman system prune --all --volumes`
+`sudo docker system prune --all --volumes`
 
 The code coverage will be stored in `htmlcov/index.html`.
 
