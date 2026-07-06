@@ -38,5 +38,19 @@ jobs:
     - name: Restore the test Dockerfile
       run: git checkout -- Dockerfile
 
+    # The container must be built for the runner:1001:1001 user; otherwise, tests will crash.
+    # To avoide double dowload we pull image from docker daemon to podman
+    - name: Download pre-built containers for testing
+      run: |
+        image=ghcr.io/willenst/kernel-build-container-runner-1001:gcc-13
+
+        docker pull "$image"
+        docker tag "$image" kernel-build-container:clang-15
+        docker tag "$image" kernel-build-container:gcc-13
+
+        podman pull "docker-daemon:$image"
+        podman tag "$image" kernel-build-container:clang-15
+        podman tag "$image" kernel-build-container:gcc-13
+
     - name: Test kernel building
       run: ./tests_for_build_linux.sh --fast
