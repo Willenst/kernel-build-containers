@@ -14,6 +14,7 @@ import os
 import pwd
 import subprocess
 import sys
+import socket
 
 supported_compilers = ['clang-5', 'clang-6', 'clang-7', 'clang-8',
                        'clang-9', 'clang-10', 'clang-11', 'clang-12',
@@ -23,6 +24,12 @@ supported_compilers = ['clang-5', 'clang-6', 'clang-7', 'clang-8',
                        'gcc-10', 'gcc-11', 'gcc-12', 'gcc-13', 'gcc-14', 'gcc-15', 'gcc-16',
                        'all']
 
+def local_registry_available():
+    try:
+        with socket.create_connection(('localhost', 5000), timeout=1):
+            return True
+    except OSError:
+        return False
 
 class ContainerImage:
     """
@@ -72,6 +79,15 @@ class ContainerImage:
                       '--build-arg', f'GID={os.getgid()}',
                       '-t', self.clang_tag,
                       '-t', self.gcc_tag]
+
+        if self.runtime == 'podman' and local_registry_available():
+            print('[!] INFO: Using local registry build cache')
+            build_args += [
+                '--layers',
+                '--cache-from', '127.0.0.1:5000/kernel-build-cache',
+                '--cache-to', '127.0.0.1:5000/kernel-build-cache',
+                '--tls-verify=false',
+            ]
 
         out = subprocess.run([*self.runtime_cmd, 'buildx', 'version'], text=True, check=False, capture_output=True)
         if out.returncode == 0:
